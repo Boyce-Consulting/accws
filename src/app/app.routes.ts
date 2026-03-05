@@ -20,7 +20,6 @@ export const routes: Routes = [
       {
         path: 'map',
         loadComponent: () => import('./features/map/map-view').then(m => m.MapViewComponent),
-        canActivate: [roleGuard('admin')],
       },
       {
         path: 'clients',

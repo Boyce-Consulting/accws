@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, signal, computed, AfterViewInit } from '@
 import { Router } from '@angular/router';
 import { SystemService } from '../../core/services/system.service';
 import { ClientService } from '../../core/services/client.service';
+import { AuthService } from '../../core/auth/auth.service';
 import * as L from 'leaflet';
 
 @Component({
@@ -11,7 +12,7 @@ import * as L from 'leaflet';
     <div class="flex flex-col h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-5rem)] -m-4 lg:-m-6">
       <!-- Header Bar -->
       <div class="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <h1 class="text-lg font-semibold text-gray-900">System Map</h1>
+        <h1 class="text-lg font-semibold text-gray-900">{{ auth.isAdmin() ? 'System Map' : 'My Sites' }}</h1>
         <div class="flex items-center gap-2">
           <!-- Status filter chips -->
           @for (f of filters; track f.value) {
@@ -46,6 +47,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   private systemService = inject(SystemService);
   private clientService = inject(ClientService);
   private router = inject(Router);
+  auth = inject(AuthService);
 
   private map: L.Map | null = null;
   private markers: L.Marker[] = [];
@@ -61,7 +63,10 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
 
   filteredSystems = computed(() => {
     const filters = this.activeFilters();
-    return this.systemService.systems().filter(s => filters.includes(s.status));
+    const clientId = this.auth.currentUser()?.clientId;
+    return this.systemService.systems().filter(s =>
+      filters.includes(s.status) && (!clientId || s.clientId === clientId)
+    );
   });
 
   ngAfterViewInit(): void {
