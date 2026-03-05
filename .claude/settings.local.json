@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "WebFetch",
+      "Grep",
+      "Glob",
+      "mcp__claude_ai_Gmail__*",
+      "mcp__plugin_playwright_playwright__*"
+    ]
+  }
+}
