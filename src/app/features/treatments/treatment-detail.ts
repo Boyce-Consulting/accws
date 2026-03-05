@@ -47,7 +47,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
               @for (sched of p.dosingSchedules; track sched.id) {
                 <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">{{ sched.zone }}</td>
-                  <td class="px-4 py-3 text-sm text-accent-600 font-medium">{{ sched.productName }}</td>
+                  <td class="px-4 py-3 text-sm text-accent-600 font-medium"><a [routerLink]="['/products', sched.productId]" class="text-accent-600 hover:text-accent-700 hover:underline font-medium">{{ sched.productName }}</a></td>
                   <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ sched.quantityLbs }}</td>
                   <td class="px-4 py-3 text-sm text-gray-600">{{ sched.frequency }}</td>
                   @for (m of [1,2,3,4,5,6,7,8,9,10,11,12]; track m) {
@@ -75,7 +75,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
               @for (sched of getSchedulesByZone(zone); track sched.id) {
                 <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <div>
-                    <p class="text-sm font-medium text-gray-900">{{ sched.productName }}</p>
+                    <a [routerLink]="['/products', sched.productId]" class="text-sm font-medium text-accent-600 hover:text-accent-700 hover:underline">{{ sched.productName }}</a>
                     <p class="text-xs text-gray-500">{{ sched.quantityLbs }} lbs &bull; {{ sched.frequency }}</p>
                   </div>
                 </div>

@@ -38,7 +38,6 @@ import { ProductCategory } from '../../core/models';
                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
               </svg>
             </div>
-            <span class="text-lg font-bold text-accent-600">\${{ product.price.toLocaleString() }}</span>
           </div>
           <h3 class="text-sm font-semibold text-gray-900 group-hover:text-accent-600 transition-colors">{{ product.name }}</h3>
           <p class="text-xs text-gray-500 mt-1">{{ product.unit }}</p>

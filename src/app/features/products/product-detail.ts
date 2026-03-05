@@ -34,10 +34,10 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
         </div>
 
         <div class="space-y-4">
-          <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <p class="text-sm text-gray-500 mb-1">Price</p>
-            <p class="text-3xl font-bold text-accent-600">\${{ p.price.toLocaleString() }}</p>
-            <p class="text-sm text-gray-500 mt-1">{{ p.unit }}</p>
+          <div class="bg-white rounded-xl border border-gray-200 p-6 text-center">
+            <p class="text-sm text-gray-500 mb-3">Interested in this product?</p>
+            <button class="w-full px-4 py-3 bg-accent-500 text-white font-semibold rounded-lg hover:bg-accent-600 transition-colors">Get a Quote</button>
+            <p class="text-xs text-gray-400 mt-2">{{ p.unit }}</p>
           </div>
           @if (p.temperatureRange) {
             <div class="bg-white rounded-xl border border-gray-200 p-6">

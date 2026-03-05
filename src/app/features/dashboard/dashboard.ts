@@ -43,6 +43,42 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
       }
     </div>
 
+    <!-- Upcoming Tasks (client users only) -->
+    @if (!auth.isAdmin()) {
+      <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold text-gray-900">What's Coming Up</h2>
+          <a routerLink="/treatments" class="text-sm text-accent-600 hover:text-accent-700 font-medium">View all</a>
+        </div>
+        @if (upcomingTasks().length > 0) {
+          <div class="space-y-2">
+            @for (task of upcomingTasks(); track task.planId + task.zone) {
+              <a [routerLink]="['/treatments', task.planId]"
+                 class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">{{ task.systemName }} &mdash; {{ task.zone }}</p>
+                    <p class="text-xs text-gray-500">{{ task.productName }}</p>
+                  </div>
+                </div>
+                <div class="text-right shrink-0 ml-4">
+                  <p class="text-sm font-medium text-gray-700">{{ task.quantityLbs }} lbs</p>
+                  <p class="text-xs text-gray-500">{{ task.frequency }}</p>
+                </div>
+              </a>
+            }
+          </div>
+        } @else {
+          <p class="text-sm text-gray-400 text-center py-4">No upcoming treatments this month</p>
+        }
+      </div>
+    }
+
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- System Health Overview -->
@@ -160,8 +196,44 @@ export class DashboardComponent {
   auth = inject(AuthService);
   reporting = inject(ReportingService);
   private systemService = inject(SystemService);
+  private treatmentService = inject(TreatmentService);
 
   systems = computed(() => this.systemService.systems().slice(0, 8));
+
+  upcomingTasks = computed(() => {
+    const clientId = this.auth.currentUser()?.clientId;
+    if (!clientId) return [];
+    const currentMonth = new Date().getMonth() + 1;
+    const tasks: {
+      systemName: string;
+      zone: string;
+      productName: string;
+      quantityLbs: number;
+      frequency: string;
+      planId: string;
+    }[] = [];
+    const activePlans = this.treatmentService.treatments().filter(
+      p => p.clientId === clientId && p.status === 'active'
+    );
+    for (const plan of activePlans) {
+      for (const schedule of plan.dosingSchedules) {
+        if (schedule.months.includes(currentMonth)) {
+          const system = this.systemService.getById(plan.systemId);
+          tasks.push({
+            systemName: system?.name ?? plan.systemId,
+            zone: schedule.zone,
+            productName: schedule.productName,
+            quantityLbs: schedule.quantityLbs,
+            frequency: schedule.frequency,
+            planId: plan.id,
+          });
+        }
+        if (tasks.length >= 6) break;
+      }
+      if (tasks.length >= 6) break;
+    }
+    return tasks;
+  });
 
   greeting = computed(() => {
     const name = this.auth.currentUser()?.name?.split(' ')[0] ?? '';
