@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { ReportingService } from '../../core/services/reporting.service';
 import { SamplingService } from '../../core/services/sampling.service';
 import { SystemService } from '../../core/services/system.service';
@@ -12,14 +12,38 @@ import { StatCardComponent } from '../../shared/components/stat-card/stat-card';
   template: `
     <app-page-header title="Reports" subtitle="Performance metrics and effluent trending" />
 
+    <!-- Filter Bar -->
+    <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+      <div class="flex items-center gap-3">
+        <label for="system-filter" class="text-sm font-medium text-gray-700 shrink-0">Filter by System</label>
+        <select
+          id="system-filter"
+          class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:ring-accent-500"
+          [value]="selectedSystemId()"
+          (change)="onSystemFilterChange($event)">
+          <option value="">All Systems</option>
+          @for (sys of allSystems(); track sys.id) {
+            <option [value]="sys.id">{{ sys.name }}</option>
+          }
+        </select>
+        @if (selectedSystemId()) {
+          <button
+            (click)="selectedSystemId.set('')"
+            class="text-xs text-gray-500 hover:text-gray-700 underline shrink-0">
+            Clear filter
+          </button>
+        }
+      </div>
+    </div>
+
     <!-- Summary Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <app-stat-card label="Systems Monitored" [value]="reporting.totalSystems()" iconBgClass="bg-accent-100 text-accent-600">
+      <app-stat-card label="Systems Monitored" [value]="filteredSystemCount()" iconBgClass="bg-accent-100 text-accent-600">
         <svg icon class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281" />
         </svg>
       </app-stat-card>
-      <app-stat-card label="Population Served" [value]="reporting.totalPopulationServed().toLocaleString()" iconBgClass="bg-primary-100 text-primary-600">
+      <app-stat-card label="Population Served" [value]="filteredPopulation()" iconBgClass="bg-primary-100 text-primary-600">
         <svg icon class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372" />
         </svg>
@@ -39,7 +63,12 @@ import { StatCardComponent } from '../../shared/components/stat-card/stat-card';
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Effluent Trend Chart -->
       <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 class="text-base font-semibold text-gray-900 mb-4">Effluent Quality Trends</h2>
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Effluent Quality Trends</h2>
+        @if (selectedSystemId()) {
+          <p class="text-xs text-gray-500 mb-4">Filtered to: {{ selectedSystemName() }}</p>
+        } @else {
+          <p class="text-xs text-gray-500 mb-4">All systems</p>
+        }
         @if (trendData().length > 0) {
           <div class="space-y-3">
             @for (item of trendData(); track item.date) {
@@ -64,7 +93,7 @@ import { StatCardComponent } from '../../shared/components/stat-card/stat-card';
             <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-primary-400"></span> TSS</span>
           </div>
         } @else {
-          <p class="text-sm text-gray-400 text-center py-8">No effluent data available</p>
+          <p class="text-sm text-gray-400 text-center py-8">No effluent data available{{ selectedSystemId() ? ' for this system' : '' }}</p>
         }
       </div>
 
@@ -99,14 +128,56 @@ import { StatCardComponent } from '../../shared/components/stat-card/stat-card';
 export class ReportingComponent {
   reporting = inject(ReportingService);
   private samplingService = inject(SamplingService);
+  private systemService = inject(SystemService);
   private auth = inject(AuthService);
 
-  totalSamples = computed(() => this.samplingService.samples().length);
+  selectedSystemId = signal('');
+
+  allSystems = computed(() =>
+    this.systemService.systems().slice().sort((a, b) => a.name.localeCompare(b.name))
+  );
+
+  selectedSystemName = computed(() => {
+    const id = this.selectedSystemId();
+    if (!id) return '';
+    return this.systemService.getById(id)?.name ?? '';
+  });
+
+  onSystemFilterChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.selectedSystemId.set(select.value);
+  }
+
+  filteredSystemCount = computed(() => {
+    const id = this.selectedSystemId();
+    return id ? 1 : this.reporting.totalSystems();
+  });
+
+  filteredPopulation = computed(() => {
+    const id = this.selectedSystemId();
+    if (id) {
+      const sys = this.systemService.getById(id);
+      return (sys?.population ?? 0).toLocaleString();
+    }
+    return this.reporting.totalPopulationServed().toLocaleString();
+  });
+
+  totalSamples = computed(() => {
+    const id = this.selectedSystemId();
+    if (id) {
+      return this.samplingService.samples().filter(s => s.systemId === id).length;
+    }
+    return this.samplingService.samples().length;
+  });
 
   trendData = computed(() => {
-    const samples = this.samplingService.samples()
-      .filter(s => s.type === 'effluent' && (s.parameters.bod != null || s.parameters.tss != null))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const id = this.selectedSystemId();
+    let samples = this.samplingService.samples()
+      .filter(s => s.type === 'effluent' && (s.parameters.bod != null || s.parameters.tss != null));
+    if (id) {
+      samples = samples.filter(s => s.systemId === id);
+    }
+    samples = samples.sort((a, b) => a.date.localeCompare(b.date));
     return samples.map(s => ({
       date: s.date,
       bod: s.parameters.bod ?? null,

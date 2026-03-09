@@ -8,6 +8,8 @@ import {
   Proposal,
   CaseStudy,
 } from '../models';
+import { WeatherRecord } from '../models/weather.model';
+import { SiteVisit } from '../models/site-visit.model';
 
 // ---------------------------------------------------------------------------
 // Supporting types for dashboard activity and alerts
@@ -17,7 +19,7 @@ export interface ActivityLogItem {
   id: string;
   message: string;
   timestamp: string;
-  type: 'sample' | 'treatment' | 'proposal' | 'system' | 'client';
+  type: 'sample' | 'treatment' | 'proposal' | 'system' | 'client' | 'visit';
 }
 
 export interface Alert {
@@ -823,6 +825,548 @@ const MOCK_SAMPLES: SampleRecord[] = [
     notes: 'H2S spot reading at wet well. Elevated — Bug on a Rope Sr deployment recommended.',
     collectedBy: 'Don Munro',
   },
+
+  // --- Colinton monthly effluent samples 2025 (backfill for progress charts) ---
+  {
+    id: 'smp-011',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-01-15',
+    type: 'effluent',
+    parameters: {
+      bod: 35.2,
+      tss: 40.5,
+      ammonia: 7.8,
+      ph: 7.1,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'January monthly sample. Under-ice conditions. BOD elevated.',
+  },
+  {
+    id: 'smp-012',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-02-12',
+    type: 'effluent',
+    parameters: {
+      bod: 33.8,
+      tss: 39.0,
+      ammonia: 7.5,
+      ph: 7.15,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'February monthly. Slight improvement from January.',
+  },
+  {
+    id: 'smp-013',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-03-18',
+    type: 'effluent',
+    parameters: {
+      bod: 31.4,
+      tss: 37.2,
+      ammonia: 7.1,
+      ph: 7.2,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'March sample. Ice starting to thin. VitaStim Polar application beginning.',
+  },
+  {
+    id: 'smp-014',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-04-16',
+    type: 'effluent',
+    parameters: {
+      bod: 29.0,
+      tss: 35.8,
+      ammonia: 6.6,
+      ph: 7.25,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'April post ice-off. Biology responding to spring treatment.',
+  },
+  {
+    id: 'smp-015',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-05-14',
+    type: 'effluent',
+    parameters: {
+      bod: 26.5,
+      tss: 33.0,
+      ammonia: 5.9,
+      ph: 7.3,
+      cod: 145,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'May sample. Continued improvement with spring bioaugmentation.',
+  },
+  {
+    id: 'smp-016',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-06-11',
+    type: 'effluent',
+    parameters: {
+      bod: 24.1,
+      tss: 30.5,
+      ammonia: 5.2,
+      ph: 7.35,
+      cod: 132,
+    },
+    collectedBy: 'Ray Menard',
+    notes: 'June sample. Summer sludge reduction program started.',
+  },
+  {
+    id: 'smp-017',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-07-16',
+    type: 'effluent',
+    parameters: {
+      bod: 22.3,
+      tss: 28.0,
+      ammonia: 4.8,
+      ph: 7.4,
+      cod: 124,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'July mid-summer. Sludge Reducer and Sludge Rx performing well.',
+  },
+  {
+    id: 'smp-018',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-08-13',
+    type: 'effluent',
+    parameters: {
+      bod: 20.8,
+      tss: 26.5,
+      ammonia: 4.4,
+      ph: 7.38,
+      cod: 118,
+    },
+    collectedBy: 'Ray Menard',
+    notes: 'August sample. BOD approaching target range. TSS trending down.',
+  },
+  {
+    id: 'smp-019',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-09-10',
+    type: 'effluent',
+    parameters: {
+      bod: 19.5,
+      tss: 24.0,
+      ammonia: 5.0,
+      ph: 7.32,
+      cod: 112,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'September. End of summer program. Excellent improvement trajectory.',
+  },
+  {
+    id: 'smp-020',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-10-17',
+    type: 'effluent',
+    parameters: {
+      bod: 18.9,
+      tss: 22.5,
+      ammonia: 5.5,
+      ph: 7.28,
+      cod: 108,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'October regulatory sample. BOD well within limits. Fall Polar application started.',
+  },
+  {
+    id: 'smp-021',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-11-12',
+    type: 'effluent',
+    parameters: {
+      bod: 18.2,
+      tss: 21.0,
+      ammonia: 6.0,
+      ph: 7.22,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'November pre-freeze. Biology maintained well heading into winter.',
+  },
+  {
+    id: 'smp-022',
+    systemId: 'sys-001',
+    cellId: 'cel-001-1',
+    date: '2025-12-10',
+    type: 'effluent',
+    parameters: {
+      bod: 18.0,
+      tss: 20.2,
+      ammonia: 6.3,
+      ph: 7.18,
+    },
+    collectedBy: 'Jacy Hingley',
+    notes: 'December under-ice sample. BOD stable at 18 mg/L. Excellent year-end result.',
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Weather Snapshots
+// ---------------------------------------------------------------------------
+
+const MOCK_WEATHER: WeatherRecord[] = [
+  {
+    id: 'wx-001',
+    systemId: 'sys-001',
+    date: '2026-03-09',
+    weather: {
+      temperatureC: -5,
+      windSpeedKmh: 32,
+      windDirection: 'NW',
+      humidityPct: 68,
+      precipitationMm: 0,
+      conditions: 'Partly cloudy, blowing snow',
+    },
+  },
+  {
+    id: 'wx-002',
+    systemId: 'sys-006',
+    date: '2026-03-09',
+    weather: {
+      temperatureC: -15,
+      windSpeedKmh: 12,
+      windDirection: 'N',
+      humidityPct: 74,
+      precipitationMm: 1.2,
+      conditions: 'Light snow, overcast',
+    },
+  },
+  {
+    id: 'wx-003',
+    systemId: 'sys-009',
+    date: '2026-03-09',
+    weather: {
+      temperatureC: -3,
+      windSpeedKmh: 18,
+      windDirection: 'W',
+      humidityPct: 55,
+      precipitationMm: 0,
+      conditions: 'Clear, chinook arch visible',
+    },
+  },
+  {
+    id: 'wx-004',
+    systemId: 'sys-010',
+    date: '2026-03-09',
+    weather: {
+      temperatureC: -4,
+      windSpeedKmh: 22,
+      windDirection: 'W',
+      humidityPct: 58,
+      precipitationMm: 0,
+      conditions: 'Clear, gusty',
+    },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Site Visits
+// ---------------------------------------------------------------------------
+
+const MOCK_SITE_VISITS: SiteVisit[] = [
+  // --- Colinton Lagoon visits ---
+  {
+    id: 'sv-001',
+    systemId: 'sys-001',
+    clientId: 'cli-001',
+    treatmentPlanId: 'trt-001',
+    visitDate: '2025-12-15',
+    visitedBy: 'Jacy Hingley',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'Applied VitaStim Polar through ice hole' },
+    ],
+    observation: {
+      systemType: 'lagoon',
+      sludgePresent: true,
+      sludgeAppearance: ['dark'],
+      sludgeSurfaceCoveragePct: 0,
+      waterColour: ['dark-brown'],
+      algaePresent: false,
+      algaeType: [],
+      cattailSeverity: 'none',
+      odour: { intensity: 1, nature: ['earthy'] },
+      productApplications: [
+        { productId: 'prod-001', productName: 'VitaStim Polar', quantity: 30, unit: 'lb', method: 'Poured through ice access hole at inlet zone', zone: 'Cell 1' },
+      ],
+    },
+    notes: 'Winter check. Applied 1 pail VitaStim Polar through ice hole near inlet. Sludge gas bubbles visible at ice edge. No discharge occurring.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2025-12-15T11:45:00Z',
+  },
+  {
+    id: 'sv-002',
+    systemId: 'sys-001',
+    clientId: 'cli-001',
+    treatmentPlanId: 'trt-001',
+    visitDate: '2026-01-20',
+    visitedBy: 'Jacy Hingley',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'Applied VitaStim Polar through augered ice hole' },
+    ],
+    observation: {
+      systemType: 'lagoon',
+      sludgePresent: false,
+      waterColour: [],
+      algaePresent: false,
+      algaeType: [],
+      cattailSeverity: 'none',
+      odour: { intensity: 0, nature: ['none'] },
+      productApplications: [
+        { productId: 'prod-001', productName: 'VitaStim Polar', quantity: 30, unit: 'lb', method: 'Applied through augered ice hole at inlet' },
+      ],
+    },
+    notes: 'January application completed. Ice thickness 48 cm. Had to auger new access hole — previous one frozen over. Freeboard adequate. Berm condition good despite heavy snowfall.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2026-01-20T12:15:00Z',
+  },
+  {
+    id: 'sv-003',
+    systemId: 'sys-001',
+    clientId: 'cli-001',
+    treatmentPlanId: 'trt-001',
+    visitDate: '2026-02-18',
+    visitedBy: 'Ray Menard',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'Applied VitaStim Polar and Polar Rx' },
+    ],
+    observation: {
+      systemType: 'lagoon',
+      sludgePresent: true,
+      sludgeAppearance: ['dark', 'loose'],
+      sludgeSurfaceCoveragePct: 0,
+      waterColour: ['green'],
+      algaePresent: false,
+      algaeType: [],
+      cattailSeverity: 'none',
+      odour: { intensity: 2, nature: ['hydrogen-sulfide'] },
+      productApplications: [
+        { productId: 'prod-001', productName: 'VitaStim Polar', quantity: 30, unit: 'lb', method: 'Applied through existing ice hole' },
+        { productId: 'prod-003', productName: 'Polar Rx', quantity: 30, unit: 'lb', method: 'Pellets distributed through ice hole to reach sludge layer' },
+      ],
+    },
+    notes: 'February visit — applied VitaStim Polar and Polar Rx. Slight septic odour suggests anaerobic activity increasing under ice. Normal for this time of year. Ice thinning slightly compared to January.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2026-02-18T11:30:00Z',
+  },
+
+  // --- Lift station visits (Innisfail & Penhold) ---
+  {
+    id: 'sv-004',
+    systemId: 'sys-009',
+    clientId: 'cli-003',
+    visitDate: '2025-12-08',
+    visitedBy: 'Jacy Hingley',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'Replaced Bug on a Rope Sr in wet well' },
+      { type: 'flow-meter-reading', description: 'Flow meter check' },
+    ],
+    observation: {
+      systemType: 'lift-station',
+      fogPresent: true,
+      fogAppearance: ['matts'],
+      fogSurfaceCoveragePct: 20,
+      odour: { intensity: 3, nature: ['hydrogen-sulfide'] },
+      h2sReading: 14.2,
+      productApplications: [
+        { productId: 'prod-007', productName: 'Bug on a Rope Sr', quantity: 36, unit: 'lb', method: 'Suspended 4x9lb pack on rope at mid-depth in wet well' },
+      ],
+    },
+    notes: 'Replaced Bug on a Rope. Previous pack ~70% dissolved after 55 days. FOG mat present but not as thick as October. H2S at 14.2 ppm — down from 18.4 in September. Trend improving.',
+    photoIds: [],
+    followUpRequired: true,
+    followUpNotes: 'Monitor H2S trend. Target below 10 ppm by next visit.',
+    nextVisitDate: '2026-02-03',
+    createdAt: '2025-12-08T14:30:00Z',
+  },
+  {
+    id: 'sv-005',
+    systemId: 'sys-009',
+    clientId: 'cli-003',
+    visitDate: '2026-02-03',
+    visitedBy: 'Ray Menard',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'Replaced Bug on a Rope Sr unit' },
+    ],
+    observation: {
+      systemType: 'lift-station',
+      fogPresent: true,
+      fogAppearance: ['globules'],
+      fogSurfaceCoveragePct: 5,
+      odour: { intensity: 2, nature: ['hydrogen-sulfide'] },
+      h2sReading: 8.6,
+      productApplications: [
+        { productId: 'prod-007', productName: 'Bug on a Rope Sr', quantity: 36, unit: 'lb', method: 'Replaced rope unit in wet well' },
+      ],
+    },
+    notes: 'H2S now at 8.6 ppm — below the 10 ppm action threshold for the first time. FOG layer dramatically reduced. Bug on a Rope program clearly working. Next replacement due early April.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2026-02-03T11:45:00Z',
+  },
+  {
+    id: 'sv-006',
+    systemId: 'sys-010',
+    clientId: 'cli-003',
+    visitDate: '2026-01-14',
+    visitedBy: 'Jacy Hingley',
+    status: 'completed',
+    activities: [
+      { type: 'flow-meter-reading', description: 'Routine flow meter and H2S check' },
+    ],
+    observation: {
+      systemType: 'lift-station',
+      fogPresent: false,
+      odour: { intensity: 1, nature: ['none'] },
+      h2sReading: 3.1,
+      productApplications: [],
+    },
+    notes: 'Routine check on Penhold station. System performing well. No product application needed — Bug on a Rope from November still active (~50% dissolved). H2S well within acceptable range.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2026-01-14T15:00:00Z',
+  },
+
+  // --- Dawson City WWTP visit ---
+  {
+    id: 'sv-007',
+    systemId: 'sys-006',
+    clientId: 'cli-002',
+    visitDate: '2026-01-28',
+    visitedBy: 'Jacy Hingley',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'VitaStim Polar maintenance dose' },
+      { type: 'sampling', description: 'MLSS and DO measurements' },
+    ],
+    observation: {
+      systemType: 'wwtp',
+      odour: { intensity: 1, nature: ['none'] },
+      effluentClarity: 'clear',
+      productApplications: [
+        { productId: 'prod-001', productName: 'VitaStim Polar', quantity: 30, unit: 'lb', method: 'Added to aeration basin via surface application' },
+      ],
+    },
+    notes: 'Annual winter check. System fully recovered from 2023 convergence event. Biology healthy, DO at 5.8 mg/L. Applied 1 pail VitaStim Polar as maintenance dose. Clarifier performing well.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2026-01-28T12:30:00Z',
+  },
+
+  // --- Scheduled future visit ---
+  {
+    id: 'sv-008',
+    systemId: 'sys-001',
+    clientId: 'cli-001',
+    treatmentPlanId: 'trt-001',
+    visitDate: '2026-03-22',
+    visitedBy: 'Jacy Hingley',
+    status: 'scheduled',
+    activities: [
+      { type: 'product-application', description: 'Spring VitaStim Polar application' },
+      { type: 'sampling', description: 'Post-thaw effluent sampling' },
+    ],
+    observation: {
+      systemType: 'lagoon',
+      sludgePresent: false,
+      waterColour: [],
+      algaePresent: false,
+      algaeType: [],
+      cattailSeverity: 'none',
+      productApplications: [],
+    },
+    notes: 'Scheduled spring ice-off inspection and first spring VitaStim Polar application. Check ice conditions, freeboard, and berm integrity after winter.',
+    photoIds: [],
+    followUpRequired: false,
+    createdAt: '2026-03-01T08:00:00Z',
+  },
+
+  // --- In-progress visit ---
+  {
+    id: 'sv-009',
+    systemId: 'sys-004',
+    clientId: 'cli-001',
+    visitDate: '2026-03-09',
+    visitedBy: 'Jacy Hingley',
+    status: 'in-progress',
+    activities: [
+      { type: 'product-application', description: 'Bio Energizer application' },
+      { type: 'aeration-maintenance', description: 'Checking aerator function' },
+    ],
+    observation: {
+      systemType: 'lagoon',
+      sludgePresent: true,
+      sludgeAppearance: ['dark'],
+      sludgeSurfaceCoveragePct: 8,
+      waterColour: ['dark-brown'],
+      algaePresent: true,
+      algaeType: ['brown'],
+      cattailSeverity: 'severe',
+      odour: { intensity: 3, nature: ['ammonia', 'earthy'] },
+      productApplications: [
+        { productId: 'prod-001', productName: 'Bio Energizer', quantity: 25, unit: 'L', method: 'spray', zone: 'Cell 1' },
+      ],
+    },
+    photoIds: ['ph-016', 'ph-017'],
+    notes: 'Cattail encroachment is concerning. Aerator #2 not functioning — needs repair.',
+    followUpRequired: true,
+    followUpNotes: 'Aerator repair needed. Schedule cattail management for spring.',
+    createdAt: '2026-03-09T10:00:00Z',
+  },
+
+  // --- Complaint-driven visit ---
+  {
+    id: 'sv-010',
+    systemId: 'sys-009',
+    clientId: 'cli-003',
+    visitDate: '2025-09-25',
+    visitedBy: 'Ray Menard',
+    status: 'completed',
+    activities: [
+      { type: 'product-application', description: 'Qwik-Zyme P application' },
+      { type: 'complaint', description: 'Odour complaint from nearby residence — investigated' },
+    ],
+    observation: {
+      systemType: 'lift-station',
+      fogPresent: true,
+      fogAppearance: ['sticking-to-wall'],
+      fogSurfaceCoveragePct: 25,
+      odour: { intensity: 4, nature: ['hydrogen-sulfide', 'sewer'] },
+      flowMeterReading: 310,
+      h2sReading: 42,
+      productApplications: [
+        { productId: 'prod-014', productName: 'Qwik-Zyme P', quantity: 8, unit: 'lb', method: 'direct pour', zone: 'Wet well' },
+      ],
+    },
+    photoIds: ['ph-011', 'ph-012', 'ph-013', 'ph-014', 'ph-015'],
+    notes: 'High H2S reading. FOG buildup significant on walls. Odour complaint validated — increased dosage applied. Will monitor closely.',
+    followUpRequired: true,
+    followUpNotes: 'Urgent: re-visit in 1 week. Consider jet truck cleaning if FOG does not reduce.',
+    nextVisitDate: '2025-10-02',
+    createdAt: '2025-09-25T15:30:00Z',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1287,6 +1831,24 @@ const MOCK_ACTIVITY: ActivityLogItem[] = [
     timestamp: '2024-01-10T09:00:00.000Z',
     type: 'client',
   },
+  {
+    id: 'act-009',
+    message: 'Site visit completed at Colinton Lagoon — VitaStim Polar and Polar Rx applied through ice',
+    timestamp: '2026-02-18T11:30:00.000Z',
+    type: 'visit',
+  },
+  {
+    id: 'act-010',
+    message: 'Site visit completed at Innisfail Lift Station — H2S down to 8.6 ppm, Bug on a Rope replaced',
+    timestamp: '2026-02-03T11:45:00.000Z',
+    type: 'visit',
+  },
+  {
+    id: 'act-011',
+    message: 'Site visit completed at Dawson City WWTP — system healthy, maintenance dose of VitaStim Polar applied',
+    timestamp: '2026-01-28T12:30:00.000Z',
+    type: 'visit',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1321,6 +1883,20 @@ const MOCK_ALERTS: Alert[] = [
     severity: 'info',
     date: '2026-03-02',
   },
+  {
+    id: 'alr-005',
+    message: 'Cold weather alert: \u201315\u00B0C at Dawson City WWTP \u2014 ensure VitaStim Polar dosing is active.',
+    severity: 'warning',
+    systemId: 'sys-006',
+    date: '2026-03-08',
+  },
+  {
+    id: 'alr-006',
+    message: 'Conditions warming at Colinton \u2014 spring treatment window approaching. Schedule ice-off inspection.',
+    severity: 'info',
+    systemId: 'sys-001',
+    date: '2026-03-09',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1339,6 +1915,8 @@ export class MockDataService {
   private _caseStudies = signal<CaseStudy[]>(MOCK_CASE_STUDIES);
   private _activityLog = signal<ActivityLogItem[]>(MOCK_ACTIVITY);
   private _alerts = signal<Alert[]>(MOCK_ALERTS);
+  private _weather = signal<WeatherRecord[]>(MOCK_WEATHER);
+  private _siteVisits = signal(MOCK_SITE_VISITS);
 
   // Public readonly signals
   readonly clients = this._clients.asReadonly();
@@ -1350,4 +1928,6 @@ export class MockDataService {
   readonly caseStudies = this._caseStudies.asReadonly();
   readonly activityLog = this._activityLog.asReadonly();
   readonly alerts = this._alerts.asReadonly();
+  readonly weather = this._weather.asReadonly();
+  readonly siteVisits = this._siteVisits.asReadonly();
 }

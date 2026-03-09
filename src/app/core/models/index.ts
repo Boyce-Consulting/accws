@@ -6,3 +6,5 @@ export * from './treatment.model';
 export * from './product.model';
 export * from './proposal.model';
 export * from './case-study.model';
+export * from './weather.model';
+export * from './site-visit.model';

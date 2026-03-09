@@ -78,6 +78,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reporting/reporting').then(m => m.ReportingComponent),
       },
       {
+        path: 'site-visits',
+        loadComponent: () => import('./features/site-visits/site-visit-list').then(m => m.SiteVisitListComponent),
+      },
+      {
+        path: 'site-visits/:id',
+        loadComponent: () => import('./features/site-visits/site-visit-detail').then(m => m.SiteVisitDetailComponent),
+      },
+      {
         path: 'case-studies',
         loadComponent: () => import('./features/case-studies/case-study-list').then(m => m.CaseStudyListComponent),
       },

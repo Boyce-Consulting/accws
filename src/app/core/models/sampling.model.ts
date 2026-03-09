@@ -29,4 +29,5 @@ export interface SampleRecord {
   sludgeSurvey?: SludgeSurvey;
   notes?: string;
   collectedBy?: string;
+  siteVisitId?: string;
 }

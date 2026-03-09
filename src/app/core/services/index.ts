@@ -8,3 +8,4 @@ export * from './product.service';
 export * from './proposal.service';
 export * from './reporting.service';
 export * from './case-study.service';
+export * from './site-visit.service';
