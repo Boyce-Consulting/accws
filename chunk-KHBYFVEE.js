@@ -1,0 +1,1 @@
+import{s as o}from"./chunk-BG7LHRBE.js";var t={production:!0,apiBaseUrl:"https://accws-backend.on-forge.com/api"};var c=new o("API_BASE_URL",{providedIn:"root",factory:()=>t.apiBaseUrl}),i="accws_jwt";export{c as a,i as b};
