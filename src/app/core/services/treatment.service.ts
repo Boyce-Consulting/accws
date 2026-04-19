@@ -1,75 +1,54 @@
-import { Injectable, inject, computed } from '@angular/core';
-import { TreatmentPlan, TreatmentStatus } from '../models';
-import { MockDataService } from './mock-data.service';
-
-// TODO: Import HttpClient when backend is ready
-// import { HttpClient } from '@angular/common/http';
-// import { API_BASE_URL } from './api.config';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, throwError } from 'rxjs';
+import { TreatmentPlan } from '../models/treatment.model';
+import { AuthService } from '../auth/auth.service';
+import { API_BASE_URL } from './api.config';
+import {
+  Envelope,
+  TreatmentPlanDto,
+  UpcomingTask,
+  UpcomingTaskDto,
+  mapTreatmentFromDto,
+  mapUpcomingFromDto,
+  unwrapItem,
+  unwrapList,
+} from './adapters';
 
 @Injectable({ providedIn: 'root' })
 export class TreatmentService {
-  private mock = inject(MockDataService);
-  // TODO: private http = inject(HttpClient);
-  // TODO: private apiUrl = `${inject(API_BASE_URL)}/treatments`;
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private base = inject(API_BASE_URL);
 
-  /** All treatment plans as a readonly computed signal */
-  readonly treatments = computed(() => this.mock.treatments());
-
-  /** Look up a single treatment plan by ID */
-  getById(id: string): TreatmentPlan | undefined {
-    return this.treatments().find(t => t.id === id);
+  list(opts?: { year?: number; systemId?: string }): Observable<TreatmentPlan[]> {
+    const orgId = this.auth.currentOrgId();
+    if (!orgId) return throwError(() => new Error('No active organization'));
+    let params = new HttpParams();
+    if (opts?.year) params = params.set('year', opts.year);
+    if (opts?.systemId) params = params.set('system_id', opts.systemId);
+    return this.http
+      .get<Envelope<TreatmentPlanDto[]>>(`${this.base}/organizations/${orgId}/treatments`, { params })
+      .pipe(unwrapList(mapTreatmentFromDto));
   }
 
-  /** Get all treatment plans for a specific wastewater system */
-  getBySystemId(systemId: string): TreatmentPlan[] {
-    return this.treatments().filter(t => t.systemId === systemId);
+  get(id: string): Observable<TreatmentPlan> {
+    const orgId = this.auth.currentOrgId();
+    if (!orgId) return throwError(() => new Error('No active organization'));
+    return this.http
+      .get<Envelope<TreatmentPlanDto>>(`${this.base}/organizations/${orgId}/treatments/${id}`)
+      .pipe(unwrapItem(mapTreatmentFromDto));
   }
 
-  /** Get all treatment plans for a specific client */
-  getByClientId(clientId: string): TreatmentPlan[] {
-    return this.treatments().filter(t => t.clientId === clientId);
-  }
-
-  /** Get all treatment plans with a specific status */
-  getByStatus(status: TreatmentStatus): TreatmentPlan[] {
-    return this.treatments().filter(t => t.status === status);
-  }
-
-  /** Get all currently active treatment plans */
-  getActive(): TreatmentPlan[] {
-    return this.getByStatus('active');
-  }
-
-  /** Get treatment plans for a specific year */
-  getByYear(year: number): TreatmentPlan[] {
-    return this.treatments().filter(t => t.year === year);
-  }
-
-  // -------------------------------------------------------------------------
-  // Write operations — currently stubbed; swap for HTTP calls when ready
-  // -------------------------------------------------------------------------
-
-  /**
-   * Create a new treatment plan.
-   * TODO: return this.http.post<TreatmentPlan>(this.apiUrl, plan);
-   */
-  create(plan: Partial<TreatmentPlan>): void {
-    console.log('TODO: Create treatment plan via API', plan);
-  }
-
-  /**
-   * Update an existing treatment plan.
-   * TODO: return this.http.patch<TreatmentPlan>(`${this.apiUrl}/${id}`, changes);
-   */
-  update(id: string, changes: Partial<TreatmentPlan>): void {
-    console.log('TODO: Update treatment plan via API', id, changes);
-  }
-
-  /**
-   * Delete a treatment plan.
-   * TODO: return this.http.delete<void>(`${this.apiUrl}/${id}`);
-   */
-  delete(id: string): void {
-    console.log('TODO: Delete treatment plan via API', id);
+  upcoming(month: number, year: number): Observable<UpcomingTask[]> {
+    const orgId = this.auth.currentOrgId();
+    if (!orgId) return throwError(() => new Error('No active organization'));
+    const params = new HttpParams().set('month', month).set('year', year);
+    return this.http
+      .get<Envelope<UpcomingTaskDto[]>>(
+        `${this.base}/organizations/${orgId}/treatments/upcoming`,
+        { params },
+      )
+      .pipe(unwrapList(mapUpcomingFromDto));
   }
 }

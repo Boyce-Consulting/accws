@@ -1,11 +1,21 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
+import { orgGuard } from './core/auth/org.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login/login').then(m => m.LoginComponent),
+  },
+  {
+    path: 'invitations/:token',
+    loadComponent: () =>
+      import('./features/auth/invitation-accept/invitation-accept').then(m => m.InvitationAcceptComponent),
+  },
+  {
+    path: 'forbidden',
+    loadComponent: () => import('./features/misc/forbidden/forbidden').then(m => m.ForbiddenComponent),
   },
   {
     path: '',
@@ -16,44 +26,52 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard').then(m => m.DashboardComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'map',
         loadComponent: () => import('./features/map/map-view').then(m => m.MapViewComponent),
+        canActivate: [orgGuard],
       },
       {
-        path: 'clients',
-        loadComponent: () => import('./features/clients/client-list').then(m => m.ClientListComponent),
-        canActivate: [roleGuard('admin')],
+        path: 'organizations',
+        loadComponent: () =>
+          import('./features/organizations/organization-list').then(m => m.OrganizationListComponent),
       },
       {
-        path: 'clients/:id',
-        loadComponent: () => import('./features/clients/client-detail').then(m => m.ClientDetailComponent),
-        canActivate: [roleGuard('admin')],
+        path: 'organizations/:id',
+        loadComponent: () =>
+          import('./features/organizations/organization-detail').then(m => m.OrganizationDetailComponent),
       },
       {
         path: 'systems',
         loadComponent: () => import('./features/systems/system-list').then(m => m.SystemListComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'systems/:id',
         loadComponent: () => import('./features/systems/system-detail').then(m => m.SystemDetailComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'sampling',
         loadComponent: () => import('./features/sampling/sample-list').then(m => m.SampleListComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'sampling/:id',
         loadComponent: () => import('./features/sampling/sample-detail').then(m => m.SampleDetailComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'treatments',
         loadComponent: () => import('./features/treatments/treatment-list').then(m => m.TreatmentListComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'treatments/:id',
         loadComponent: () => import('./features/treatments/treatment-detail').then(m => m.TreatmentDetailComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'products',
@@ -64,34 +82,19 @@ export const routes: Routes = [
         loadComponent: () => import('./features/products/product-detail').then(m => m.ProductDetailComponent),
       },
       {
-        path: 'proposals',
-        loadComponent: () => import('./features/proposals/proposal-list').then(m => m.ProposalListComponent),
-        canActivate: [roleGuard('admin')],
-      },
-      {
-        path: 'proposals/:id',
-        loadComponent: () => import('./features/proposals/proposal-detail').then(m => m.ProposalDetailComponent),
-        canActivate: [roleGuard('admin')],
-      },
-      {
         path: 'reports',
         loadComponent: () => import('./features/reporting/reporting').then(m => m.ReportingComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'site-visits',
         loadComponent: () => import('./features/site-visits/site-visit-list').then(m => m.SiteVisitListComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'site-visits/:id',
         loadComponent: () => import('./features/site-visits/site-visit-detail').then(m => m.SiteVisitDetailComponent),
-      },
-      {
-        path: 'case-studies',
-        loadComponent: () => import('./features/case-studies/case-study-list').then(m => m.CaseStudyListComponent),
-      },
-      {
-        path: 'case-studies/:id',
-        loadComponent: () => import('./features/case-studies/case-study-detail').then(m => m.CaseStudyDetailComponent),
+        canActivate: [orgGuard],
       },
       {
         path: 'account',

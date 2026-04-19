@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx ng build --base-href /accws/
+      - run: npx ng build --base-href /accws-frontend/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/accws/browser

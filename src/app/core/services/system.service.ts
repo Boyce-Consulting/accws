@@ -1,70 +1,67 @@
-import { Injectable, inject, computed } from '@angular/core';
-import { WastewaterSystem, SystemStatus, SystemType } from '../models';
-import { MockDataService } from './mock-data.service';
-
-// TODO: Import HttpClient when backend is ready
-// import { HttpClient } from '@angular/common/http';
-// import { API_BASE_URL } from './api.config';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, throwError } from 'rxjs';
+import { WastewaterSystem } from '../models/system.model';
+import { AuthService } from '../auth/auth.service';
+import { API_BASE_URL } from './api.config';
+import {
+  Envelope,
+  SampleDto,
+  SiteVisitDto,
+  SystemDto,
+  mapSampleFromDto,
+  mapSiteVisitFromDto,
+  mapSystemFromDto,
+  unwrapItem,
+  unwrapList,
+} from './adapters';
+import { SampleRecord } from '../models/sampling.model';
+import { SiteVisit } from '../models/site-visit.model';
 
 @Injectable({ providedIn: 'root' })
 export class SystemService {
-  private mock = inject(MockDataService);
-  // TODO: private http = inject(HttpClient);
-  // TODO: private apiUrl = `${inject(API_BASE_URL)}/systems`;
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private base = inject(API_BASE_URL);
 
-  /** All wastewater systems as a readonly computed signal */
-  readonly systems = computed(() => this.mock.systems());
-
-  /** Look up a single system by ID */
-  getById(id: string): WastewaterSystem | undefined {
-    return this.systems().find(s => s.id === id);
+  private orgUrl(): Observable<string> | string {
+    const id = this.auth.currentOrgId();
+    return id ? `${this.base}/organizations/${id}` : throwError(() => new Error('No active organization'));
   }
 
-  /** Get all systems belonging to a specific client */
-  getByClientId(clientId: string): WastewaterSystem[] {
-    return this.systems().filter(s => s.clientId === clientId);
+  list(): Observable<WastewaterSystem[]> {
+    const id = this.auth.currentOrgId();
+    if (!id) return throwError(() => new Error('No active organization'));
+    return this.http
+      .get<Envelope<SystemDto[]>>(`${this.base}/organizations/${id}/systems`)
+      .pipe(unwrapList(mapSystemFromDto));
   }
 
-  /** Filter systems by operational status */
-  getByStatus(status: SystemStatus): WastewaterSystem[] {
-    return this.systems().filter(s => s.status === status);
+  get(systemId: string): Observable<WastewaterSystem> {
+    const id = this.auth.currentOrgId();
+    if (!id) return throwError(() => new Error('No active organization'));
+    return this.http
+      .get<Envelope<SystemDto>>(`${this.base}/organizations/${id}/systems/${systemId}`)
+      .pipe(unwrapItem(mapSystemFromDto));
   }
 
-  /** Filter systems by type */
-  getByType(type: SystemType): WastewaterSystem[] {
-    return this.systems().filter(s => s.type === type);
+  listVisits(systemId: string): Observable<SiteVisit[]> {
+    const id = this.auth.currentOrgId();
+    if (!id) return throwError(() => new Error('No active organization'));
+    return this.http
+      .get<Envelope<SiteVisitDto[]>>(
+        `${this.base}/organizations/${id}/systems/${systemId}/site-visits`,
+      )
+      .pipe(unwrapList(mapSiteVisitFromDto));
   }
 
-  /** Filter systems by province */
-  getByProvince(province: string): WastewaterSystem[] {
-    return this.systems().filter(s => s.province === province);
-  }
-
-  // -------------------------------------------------------------------------
-  // Write operations — currently stubbed; swap for HTTP calls when ready
-  // -------------------------------------------------------------------------
-
-  /**
-   * Create a new wastewater system.
-   * TODO: return this.http.post<WastewaterSystem>(this.apiUrl, system);
-   */
-  create(system: Partial<WastewaterSystem>): void {
-    console.log('TODO: Create system via API', system);
-  }
-
-  /**
-   * Update an existing wastewater system.
-   * TODO: return this.http.patch<WastewaterSystem>(`${this.apiUrl}/${id}`, changes);
-   */
-  update(id: string, changes: Partial<WastewaterSystem>): void {
-    console.log('TODO: Update system via API', id, changes);
-  }
-
-  /**
-   * Delete a wastewater system.
-   * TODO: return this.http.delete<void>(`${this.apiUrl}/${id}`);
-   */
-  delete(id: string): void {
-    console.log('TODO: Delete system via API', id);
+  listSamples(systemId: string): Observable<SampleRecord[]> {
+    const id = this.auth.currentOrgId();
+    if (!id) return throwError(() => new Error('No active organization'));
+    return this.http
+      .get<Envelope<SampleDto[]>>(
+        `${this.base}/organizations/${id}/systems/${systemId}/sampling`,
+      )
+      .pipe(unwrapList(mapSampleFromDto));
   }
 }

@@ -1,9 +1,10 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal, effect } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleCasePipe } from '@angular/common';
 import { TreatmentService } from '../../core/services/treatment.service';
 import { SystemService } from '../../core/services/system.service';
-import { ClientService } from '../../core/services/client.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { DosingSchedule, TreatmentPlan } from '../../core/models/treatment.model';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge';
 
@@ -11,8 +12,10 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
   selector: 'app-treatment-detail',
   imports: [RouterLink, TitleCasePipe, PageHeaderComponent, StatusBadgeComponent],
   template: `
-    @if (plan(); as p) {
-      <app-page-header [title]="systemName() + ' - ' + p.year" [subtitle]="clientName()">
+    @if (loading()) {
+      <p class="text-sm text-gray-500">Loading treatment plan…</p>
+    } @else if (plan(); as p) {
+      <app-page-header [title]="systemName() + ' - ' + p.year" [subtitle]="auth.currentOrg()?.name ?? ''">
         <a routerLink="/treatments" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back</a>
       </app-page-header>
 
@@ -20,12 +23,8 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
         <app-status-badge
           [label]="p.status | titlecase"
           [color]="p.status === 'active' ? 'green' : p.status === 'planned' ? 'blue' : p.status === 'completed' ? 'gray' : 'yellow'" />
-        @if (p.totalCost) {
-          <span class="text-sm font-semibold text-gray-700">\${{ p.totalCost.toLocaleString() }}</span>
-        }
       </div>
 
-      <!-- Dosing Calendar Grid -->
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
         <div class="px-5 py-4 border-b border-gray-200">
           <h2 class="text-base font-semibold text-gray-900">Dosing Calendar</h2>
@@ -47,16 +46,14 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
               @for (sched of p.dosingSchedules; track sched.id) {
                 <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">{{ sched.zone }}</td>
-                  <td class="px-4 py-3 text-sm text-accent-600 font-medium"><a [routerLink]="['/products', sched.productId]" class="text-accent-600 hover:text-accent-700 hover:underline font-medium">{{ sched.productName }}</a></td>
+                  <td class="px-4 py-3 text-sm text-accent-600 font-medium">
+                    <a [routerLink]="['/products', sched.productId]" class="text-accent-600 hover:text-accent-700 hover:underline">{{ sched.productName }}</a>
+                  </td>
                   <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ sched.quantityLbs }}</td>
                   <td class="px-4 py-3 text-sm text-gray-600">{{ sched.frequency }}</td>
-                  @for (m of [1,2,3,4,5,6,7,8,9,10,11,12]; track m) {
+                  @for (m of monthNums; track m) {
                     <td class="px-2 py-3 text-center">
-                      @if (sched.months.includes(m)) {
-                        <span class="inline-block w-4 h-4 bg-accent-500 rounded-full"></span>
-                      } @else {
-                        <span class="inline-block w-4 h-4 bg-gray-100 rounded-full"></span>
-                      }
+                      <span class="inline-block w-4 h-4 rounded-full" [class]="sched.months.includes(m) ? 'bg-accent-500' : 'bg-gray-100'"></span>
                     </td>
                   }
                 </tr>
@@ -66,13 +63,12 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
         </div>
       </div>
 
-      <!-- Dosing Schedules by Zone -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         @for (zone of zones(); track zone) {
           <div class="bg-white rounded-xl border border-gray-200 p-5">
             <h3 class="text-sm font-semibold text-gray-900 mb-3">{{ zone }}</h3>
             <div class="space-y-2">
-              @for (sched of getSchedulesByZone(zone); track sched.id) {
+              @for (sched of schedulesByZone(zone); track sched.id) {
                 <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <div>
                     <a [routerLink]="['/products', sched.productId]" class="text-sm font-medium text-accent-600 hover:text-accent-700 hover:underline">{{ sched.productName }}</a>
@@ -96,34 +92,46 @@ export class TreatmentDetailComponent {
   private route = inject(ActivatedRoute);
   private treatmentService = inject(TreatmentService);
   private systemService = inject(SystemService);
-  private clientService = inject(ClientService);
+  auth = inject(AuthService);
 
-  monthHeaders = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+  monthHeaders = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  monthNums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  plan = computed(() => {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    return this.treatmentService.getById(id);
-  });
-
-  systemName = computed(() => {
-    const p = this.plan();
-    if (!p) return '';
-    return this.systemService.getById(p.systemId)?.name ?? 'Unknown';
-  });
-
-  clientName = computed(() => {
-    const p = this.plan();
-    if (!p) return '';
-    return this.clientService.getById(p.clientId)?.name ?? 'Unknown';
-  });
+  plan = signal<TreatmentPlan | null>(null);
+  loading = signal(true);
+  systemNameById = signal<Map<string, string>>(new Map());
 
   zones = computed(() => {
     const p = this.plan();
     if (!p) return [];
-    return [...new Set(p.dosingSchedules.map(d => d.zone))];
+    return [...new Set(p.dosingSchedules.map((d) => d.zone))];
   });
 
-  getSchedulesByZone(zone: string): any[] {
-    return this.plan()?.dosingSchedules.filter(d => d.zone === zone) ?? [];
+  systemName = computed(() => {
+    const p = this.plan();
+    return p ? this.systemNameById().get(p.systemId) ?? 'Unknown' : '';
+  });
+
+  schedulesByZone(zone: string): DosingSchedule[] {
+    return this.plan()?.dosingSchedules.filter((d) => d.zone === zone) ?? [];
+  }
+
+  constructor() {
+    const id = this.route.snapshot.paramMap.get('id') ?? '';
+    effect(() => {
+      const orgId = this.auth.currentOrgId();
+      if (!orgId || !id) return;
+      this.loading.set(true);
+      this.treatmentService.get(id).subscribe({
+        next: (p) => {
+          this.plan.set(p);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
+      this.systemService.list().subscribe({
+        next: (list) => this.systemNameById.set(new Map(list.map((s) => [s.id, s.name]))),
+      });
+    });
   }
 }

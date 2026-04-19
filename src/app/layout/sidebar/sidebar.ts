@@ -47,7 +47,9 @@ const ICONS = {
       <nav class="flex-1 overflow-y-auto py-4 px-3">
         @for (section of navSections; track section.heading) {
           <div class="mb-4">
-            <h3 class="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary-400">{{ section.heading }}</h3>
+            @if (section.heading) {
+              <h3 class="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary-400">{{ section.heading }}</h3>
+            }
             <ul class="space-y-0.5">
               @for (item of section.items; track item.route) {
                 <li>
@@ -92,7 +94,7 @@ export class SidebarComponent {
       items: [
         { label: 'Dashboard', route: '/dashboard', icon: ICONS.dashboard },
         { label: 'Map', route: '/map', icon: ICONS.map },
-        { label: 'Clients', route: '/clients', icon: ICONS.clients },
+        { label: 'Organizations', route: '/organizations', icon: ICONS.clients },
         { label: 'Systems', route: '/systems', icon: ICONS.systems },
       ],
     },
@@ -107,8 +109,13 @@ export class SidebarComponent {
     {
       heading: 'Business',
       items: [
-        { label: 'Proposals', route: '/proposals', icon: ICONS.proposals },
         { label: 'Reports', route: '/reports', icon: ICONS.reports },
+      ],
+    },
+    {
+      heading: 'Account',
+      items: [
+        { label: 'My Account', route: '/account', icon: ICONS.account },
       ],
     },
   ];
@@ -131,10 +138,10 @@ export class SidebarComponent {
       ],
     },
     {
-      heading: '',
+      heading: 'Account',
       items: [
         { label: 'Reports', route: '/reports', icon: ICONS.reports },
-        { label: 'Account', route: '/account', icon: ICONS.account },
+        { label: 'My Account', route: '/account', icon: ICONS.account },
       ],
     },
   ];

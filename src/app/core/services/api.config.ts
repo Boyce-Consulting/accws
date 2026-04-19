@@ -1,11 +1,9 @@
 import { InjectionToken } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
   providedIn: 'root',
-  factory: () => '/api',
+  factory: () => environment.apiBaseUrl,
 });
 
-export const USE_MOCK_DATA = new InjectionToken<boolean>('USE_MOCK_DATA', {
-  providedIn: 'root',
-  factory: () => true, // Set to false when backend is ready
-});
+export const JWT_STORAGE_KEY = 'accws_jwt';

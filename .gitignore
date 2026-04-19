@@ -44,3 +44,4 @@ __screenshots__/
 Thumbs.db
 debug-page.mjs
 login-page.png
+.playwright-mcp/

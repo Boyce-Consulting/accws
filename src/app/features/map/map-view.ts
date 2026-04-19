@@ -1,8 +1,8 @@
-import { Component, inject, OnDestroy, signal, computed, AfterViewInit } from '@angular/core';
+import { Component, inject, OnDestroy, signal, computed, AfterViewInit, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { SystemService } from '../../core/services/system.service';
-import { ClientService } from '../../core/services/client.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { WastewaterSystem } from '../../core/models/system.model';
 import * as L from 'leaflet';
 
 @Component({
@@ -10,11 +10,9 @@ import * as L from 'leaflet';
   imports: [],
   template: `
     <div class="flex flex-col h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-5rem)] -m-4 lg:-m-6">
-      <!-- Header Bar -->
       <div class="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
         <h1 class="text-lg font-semibold text-gray-900">{{ auth.isAdmin() ? 'System Map' : 'My Sites' }}</h1>
         <div class="flex items-center gap-2">
-          <!-- Status filter chips -->
           @for (f of filters; track f.value) {
             <button
               (click)="toggleFilter(f.value)"
@@ -26,10 +24,8 @@ import * as L from 'leaflet';
         </div>
       </div>
 
-      <!-- Map Container -->
       <div id="system-map" class="flex-1"></div>
 
-      <!-- Legend -->
       <div class="flex items-center gap-4 px-4 py-2 bg-white border-t border-gray-200 text-xs">
         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Healthy</span>
         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-amber-500"></span> Attention</span>
@@ -45,7 +41,6 @@ import * as L from 'leaflet';
 })
 export class MapViewComponent implements AfterViewInit, OnDestroy {
   private systemService = inject(SystemService);
-  private clientService = inject(ClientService);
   private router = inject(Router);
   auth = inject(AuthService);
 
@@ -53,6 +48,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   private markers: L.Marker[] = [];
 
   activeFilters = signal<string[]>(['healthy', 'attention', 'critical', 'offline']);
+  systems = signal<WastewaterSystem[]>([]);
 
   filters = [
     { value: 'healthy', label: 'Healthy', activeClass: 'border-green-500 bg-green-50 text-green-700' },
@@ -61,13 +57,25 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     { value: 'offline', label: 'Offline', activeClass: 'border-gray-500 bg-gray-50 text-gray-700' },
   ];
 
-  filteredSystems = computed(() => {
-    const filters = this.activeFilters();
-    const clientId = this.auth.currentUser()?.clientId;
-    return this.systemService.systems().filter(s =>
-      filters.includes(s.status) && (!clientId || s.clientId === clientId)
-    );
-  });
+  filteredSystems = computed(() =>
+    this.systems().filter((s) => this.activeFilters().includes(s.status)),
+  );
+
+  constructor() {
+    effect(() => {
+      const orgId = this.auth.currentOrgId();
+      if (!orgId) {
+        this.systems.set([]);
+        return;
+      }
+      this.systemService.list().subscribe({
+        next: (list) => {
+          this.systems.set(list);
+          this.updateMarkers();
+        },
+      });
+    });
+  }
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -80,9 +88,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   toggleFilter(value: string): void {
     const current = this.activeFilters();
     if (current.includes(value)) {
-      if (current.length > 1) {
-        this.activeFilters.set(current.filter(f => f !== value));
-      }
+      if (current.length > 1) this.activeFilters.set(current.filter((f) => f !== value));
     } else {
       this.activeFilters.set([...current, value]);
     }
@@ -90,7 +96,6 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   }
 
   private initMap(): void {
-    // Fix Leaflet default icon paths
     const iconDefault = L.icon({
       iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -102,7 +107,6 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     L.Marker.prototype.options.icon = iconDefault;
 
     this.map = L.map('system-map').setView([55, -114], 5);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 18,
@@ -114,16 +118,16 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   private updateMarkers(): void {
     if (!this.map) return;
 
-    // Clear existing markers
-    this.markers.forEach(m => m.remove());
+    this.markers.forEach((m) => m.remove());
     this.markers = [];
 
     const systems = this.filteredSystems();
     const bounds: L.LatLngExpression[] = [];
+    const orgName = this.auth.currentOrg()?.name ?? '';
 
     for (const sys of systems) {
+      if (!sys.location?.lat && !sys.location?.lng) continue;
       const color = this.statusMarkerColor(sys.status);
-      const client = this.clientService.getById(sys.clientId);
 
       const icon = L.divIcon({
         className: 'custom-marker',
@@ -138,7 +142,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
         .bindPopup(`
           <div style="min-width:200px;font-family:system-ui;">
             <p style="font-weight:600;margin:0 0 4px;">${sys.name}</p>
-            <p style="color:#666;font-size:12px;margin:0 0 2px;">${client?.name ?? 'Unknown Client'}</p>
+            <p style="color:#666;font-size:12px;margin:0 0 2px;">${orgName}</p>
             <p style="color:#666;font-size:12px;margin:0 0 8px;">${sys.type.charAt(0).toUpperCase() + sys.type.slice(1)} &bull; ${sys.province}</p>
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;background:${color}20;color:${color};">${sys.status.charAt(0).toUpperCase() + sys.status.slice(1)}</span>
@@ -163,12 +167,12 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   }
 
   private statusMarkerColor(status: string): string {
-    const map: Record<string, string> = {
+    const m: Record<string, string> = {
       healthy: '#16a34a',
       attention: '#d97706',
       critical: '#dc2626',
       offline: '#9ca3af',
     };
-    return map[status] ?? '#9ca3af';
+    return m[status] ?? '#9ca3af';
   }
 }

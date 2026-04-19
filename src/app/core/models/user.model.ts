@@ -1,3 +1,5 @@
+import { OrganizationMembership } from './organization.model';
+
 export type UserRole = 'admin' | 'client';
 
 export interface User {
@@ -6,7 +8,10 @@ export interface User {
   email: string;
   role: UserRole;
   avatar?: string;
-  clientId?: string; // links to Client for client-role users
   phone?: string;
   title?: string;
+  organizations?: OrganizationMembership[];
+  twoFactorEnabled?: boolean;
+  /** @deprecated use currentOrgId on AuthService. Kept as a read-only compatibility field until services are fully migrated. */
+  clientId?: string;
 }
