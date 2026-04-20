@@ -33,14 +33,8 @@ const ICONS = {
   template: `
     <aside class="fixed left-0 top-0 bottom-0 w-64 bg-primary-800 text-white flex flex-col z-40">
       <!-- Logo -->
-      <div class="h-14 flex items-center gap-3 px-5 border-b border-primary-700">
-        <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
-          <span class="text-white font-bold text-xs">ACC</span>
-        </div>
-        <div>
-          <div class="font-semibold text-sm leading-tight">ACCWS</div>
-          <div class="text-primary-300 text-[10px] leading-tight">Wastewater Solutions</div>
-        </div>
+      <div class="h-14 flex items-center px-5 border-b border-primary-700">
+        <img src="logo-white.png" alt="ACCWS" class="h-7 w-auto" />
       </div>
 
       <!-- Navigation -->
@@ -70,18 +64,39 @@ const ICONS = {
         }
       </nav>
 
-      <!-- User section at bottom -->
-      <div class="p-4 border-t border-primary-700">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-accent-500 rounded-full flex items-center justify-center text-xs font-semibold">
-            {{ getInitials() }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium truncate">{{ auth.currentUser()?.name }}</p>
-            <p class="text-xs text-primary-300 truncate">{{ auth.isAdmin() ? 'Administrator' : 'Client' }}</p>
-          </div>
+      <!-- View-as-client toggle (admin-only) -->
+      @if (auth.isAdmin()) {
+        <div class="px-4 py-2 border-t border-primary-700">
+          @if (auth.viewAsClient()) {
+            <button (click)="auth.setViewAsClient(false)"
+              class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-medium hover:bg-amber-500/30 transition-colors">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              Viewing as client — Exit
+            </button>
+          } @else {
+            <button (click)="auth.setViewAsClient(true)"
+              class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary-700/50 hover:bg-primary-700/70 text-primary-200 hover:text-white text-xs font-medium transition-colors">
+              View as client
+            </button>
+          }
         </div>
-      </div>
+      }
+
+      <!-- User section at bottom — click to open /account -->
+      <a routerLink="/account"
+        class="p-4 border-t border-primary-700 flex items-center gap-3 hover:bg-primary-700/40 transition-colors cursor-pointer">
+        <div class="w-8 h-8 bg-accent-500 rounded-full flex items-center justify-center text-xs font-semibold">
+          {{ getInitials() }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium truncate">{{ auth.currentUser()?.name }}</p>
+          <p class="text-xs text-primary-300 truncate">
+            @if (auth.viewAsClient()) { Admin (viewing as client) }
+            @else if (auth.isAdmin()) { Administrator }
+            @else { Client }
+          </p>
+        </div>
+      </a>
     </aside>
   `,
 })
@@ -95,7 +110,6 @@ export class SidebarComponent {
         { label: 'Dashboard', route: '/dashboard', icon: ICONS.dashboard },
         { label: 'Map', route: '/map', icon: ICONS.map },
         { label: 'Organizations', route: '/organizations', icon: ICONS.clients },
-        { label: 'Systems', route: '/systems', icon: ICONS.systems },
       ],
     },
     {
@@ -107,15 +121,24 @@ export class SidebarComponent {
       ],
     },
     {
-      heading: 'Business',
+      heading: 'Catalog',
       items: [
+        { label: 'Systems', route: '/systems', icon: ICONS.systems },
+        { label: 'Products', route: '/products', icon: ICONS.treatments },
+      ],
+    },
+    {
+      heading: 'Organization',
+      items: [
+        { label: 'People', route: '/people', icon: ICONS.clients },
         { label: 'Reports', route: '/reports', icon: ICONS.reports },
       ],
     },
     {
-      heading: 'Account',
+      heading: 'ACCWS',
       items: [
-        { label: 'My Account', route: '/account', icon: ICONS.account },
+        { label: 'Overview', route: '/admin/overview', icon: ICONS.dashboard },
+        { label: 'System Admins', route: '/admin/system-admins', icon: ICONS.clients },
       ],
     },
   ];
@@ -126,7 +149,6 @@ export class SidebarComponent {
       items: [
         { label: 'Dashboard', route: '/dashboard', icon: ICONS.dashboard },
         { label: 'My Sites', route: '/map', icon: ICONS.map },
-        { label: 'Systems', route: '/systems', icon: ICONS.systems },
       ],
     },
     {
@@ -138,16 +160,23 @@ export class SidebarComponent {
       ],
     },
     {
-      heading: 'Account',
+      heading: 'Catalog',
       items: [
+        { label: 'Systems', route: '/systems', icon: ICONS.systems },
+        { label: 'Products', route: '/products', icon: ICONS.treatments },
+      ],
+    },
+    {
+      heading: 'Organization',
+      items: [
+        { label: 'People', route: '/people', icon: ICONS.clients },
         { label: 'Reports', route: '/reports', icon: ICONS.reports },
-        { label: 'My Account', route: '/account', icon: ICONS.account },
       ],
     },
   ];
 
   get navSections(): NavSection[] {
-    return this.auth.isAdmin() ? this.adminSections : this.clientSections;
+    return this.auth.uiShowsAdmin() ? this.adminSections : this.clientSections;
   }
 
   getInitials(): string {

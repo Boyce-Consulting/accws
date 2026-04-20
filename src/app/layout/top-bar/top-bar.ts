@@ -1,8 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-top-bar',
+  imports: [RouterLink],
   template: `
     <header class="bg-white border-b border-gray-200 px-4 lg:px-6 h-14 flex items-center justify-between shrink-0">
       <!-- Left: Logo (mobile) / Page context -->
@@ -49,6 +51,14 @@ import { AuthService } from '../../core/auth/auth.service';
                   {{ auth.isAdmin() ? 'Administrator' : 'Client' }}
                 </span>
               </div>
+              <a routerLink="/account"
+                (click)="showUserMenu.set(false)"
+                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                My Account
+              </a>
               <button
                 (click)="auth.logout(); showUserMenu.set(false)"
                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">

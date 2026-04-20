@@ -22,4 +22,46 @@ export class ProductService {
       .get<Envelope<ProductDto>>(`${this.base}/products/${id}`)
       .pipe(unwrapItem(mapProductFromDto));
   }
+
+  /** Admin-only: create a product. */
+  create(body: {
+    name: string;
+    category: ProductCategory;
+    description: string;
+    unit: string;
+    price_cents: number;
+    active_ingredient?: string;
+    applications: string[];
+    temperature_range?: string;
+    image_url?: string;
+  }): Observable<Product> {
+    return this.http
+      .post<Envelope<ProductDto>>(`${this.base}/admin/products`, body)
+      .pipe(unwrapItem(mapProductFromDto));
+  }
+
+  /** Admin-only: update a product. */
+  update(
+    id: string,
+    body: Partial<{
+      name: string;
+      category: ProductCategory;
+      description: string;
+      unit: string;
+      price_cents: number;
+      active_ingredient: string;
+      applications: string[];
+      temperature_range: string;
+      image_url: string;
+    }>,
+  ): Observable<Product> {
+    return this.http
+      .patch<Envelope<ProductDto>>(`${this.base}/admin/products/${id}`, body)
+      .pipe(unwrapItem(mapProductFromDto));
+  }
+
+  /** Admin-only: delete a product. */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/admin/products/${id}`);
+  }
 }

@@ -1,5 +1,5 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, effect, inject, signal, OnInit } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
   AuthProvider,
@@ -13,18 +13,12 @@ type Step = 'credentials' | 'two-factor' | 'enroll-phone' | 'enroll-code' | 'pho
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900 flex items-center justify-center p-4">
+    <div class="min-h-screen bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900 flex items-start justify-center p-4 pt-16 sm:pt-24">
       <div class="w-full max-w-md">
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-4">
-            <svg class="w-10 h-10 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-            </svg>
-          </div>
-          <h1 class="text-2xl font-bold text-white">ACC Wastewater Solutions</h1>
-          <p class="text-primary-200 mt-1">Wastewater Management Platform</p>
+          <img src="logo-white.png" alt="ACCWS" class="h-12 sm:h-14 w-auto mx-auto" />
         </div>
 
         <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -69,7 +63,10 @@ type Step = 'credentials' | 'two-factor' | 'enroll-phone' | 'enroll-code' | 'pho
                     [disabled]="auth.isLoading()" />
                 </div>
                 <div>
-                  <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <a routerLink="/auth/forgot-password" class="text-xs text-accent-600 hover:text-accent-700">Forgot password?</a>
+                  </div>
                   <input id="password" type="password" [(ngModel)]="password" name="password" placeholder="••••••••" autocomplete="current-password"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 outline-none transition-colors text-sm"
                     [disabled]="auth.isLoading()" />
@@ -213,6 +210,24 @@ export class LoginComponent implements OnInit {
     if (this.auth.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
     }
+  }
+
+  constructor() {
+    // If Google/Microsoft OAuth exchange surfaces a 2FA or enrollment challenge,
+    // branch into the same step machinery used by password login.
+    effect(() => {
+      const res = this.auth.pendingChallenge();
+      if (!res) return;
+      if (isTwoFactorRequired(res)) {
+        this.challengeToken = res.challenge_token;
+        this.code = '';
+        this.step.set('two-factor');
+      } else if (isMustEnroll(res)) {
+        this.enrollToken = res.enroll_token;
+        this.step.set('enroll-phone');
+      }
+      this.auth.consumePendingChallenge();
+    });
   }
 
   step = signal<Step>('credentials');

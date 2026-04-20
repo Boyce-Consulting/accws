@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TitleCasePipe } from '@angular/common';
 import { OrganizationService } from '../../core/services/organization.service';
@@ -10,9 +11,38 @@ import { AvatarComponent } from '../../shared/components/avatar/avatar';
 
 @Component({
   selector: 'app-organization-list',
-  imports: [RouterLink, TitleCasePipe, PageHeaderComponent, StatusBadgeComponent, AvatarComponent],
+  imports: [RouterLink, FormsModule, TitleCasePipe, PageHeaderComponent, StatusBadgeComponent, AvatarComponent],
   template: `
-    <app-page-header title="Organizations" subtitle="Municipal and utility clients" />
+    <app-page-header title="Organizations" subtitle="Municipal and utility clients">
+      @if (auth.uiShowsAdmin()) {
+        <button (click)="showCreate.set(!showCreate())" class="inline-flex items-center gap-2 px-3 py-2 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-lg">
+          @if (showCreate()) { Cancel } @else { + New organization }
+        </button>
+      }
+    </app-page-header>
+
+    @if (showCreate() && auth.uiShowsAdmin()) {
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6 max-w-xl">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Create organization</h2>
+        <form (ngSubmit)="create()" class="space-y-3">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input id="name" type="text" [(ngModel)]="newName" name="name" required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label for="slug" class="block text-sm font-medium text-gray-700 mb-1">Slug <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input id="slug" type="text" [(ngModel)]="newSlug" name="slug" placeholder="town-of-example"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+          @if (createError()) { <div class="text-sm text-danger bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ createError() }}</div> }
+          <button type="submit" [disabled]="creating() || !newName"
+            class="bg-accent-500 hover:bg-accent-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 text-sm">
+            @if (creating()) { Creating... } @else { Create }
+          </button>
+        </form>
+      </div>
+    }
 
     @if (loading()) {
       <p class="text-sm text-gray-500">Loading organizations…</p>
@@ -45,12 +75,22 @@ import { AvatarComponent } from '../../shared/components/avatar/avatar';
 })
 export class OrganizationListComponent implements OnInit {
   private orgService = inject(OrganizationService);
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
 
   orgs = signal<Organization[]>([]);
   loading = signal(true);
 
+  showCreate = signal(false);
+  newName = '';
+  newSlug = '';
+  creating = signal(false);
+  createError = signal<string | null>(null);
+
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
     const source = this.auth.isAdmin() ? this.orgService.listAdmin() : this.orgService.list();
     source.subscribe({
       next: (list) => {
@@ -58,6 +98,27 @@ export class OrganizationListComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  create(): void {
+    if (!this.newName) return;
+    this.creating.set(true);
+    this.createError.set(null);
+    const body: { name: string; slug?: string } = { name: this.newName };
+    if (this.newSlug) body.slug = this.newSlug;
+    this.orgService.create(body).subscribe({
+      next: () => {
+        this.creating.set(false);
+        this.showCreate.set(false);
+        this.newName = '';
+        this.newSlug = '';
+        this.load();
+      },
+      error: (err) => {
+        this.createError.set(err?.error?.message ?? 'Could not create organization.');
+        this.creating.set(false);
+      },
     });
   }
 }

@@ -1,8 +1,10 @@
-import { Component, inject, OnDestroy, signal, computed, AfterViewInit, effect } from '@angular/core';
+import { Component, inject, OnDestroy, signal, computed, AfterViewInit, effect, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SystemService } from '../../core/services/system.service';
+import { OrganizationService } from '../../core/services/organization.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { WastewaterSystem } from '../../core/models/system.model';
+import { Organization } from '../../core/models/organization.model';
 import * as L from 'leaflet';
 
 @Component({
@@ -10,17 +12,32 @@ import * as L from 'leaflet';
   imports: [],
   template: `
     <div class="flex flex-col h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-5rem)] -m-4 lg:-m-6">
-      <div class="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <h1 class="text-lg font-semibold text-gray-900">{{ auth.isAdmin() ? 'System Map' : 'My Sites' }}</h1>
-        <div class="flex items-center gap-2">
-          @for (f of filters; track f.value) {
-            <button
-              (click)="toggleFilter(f.value)"
-              class="px-3 py-1 text-xs font-medium rounded-full border transition-colors"
-              [class]="activeFilters().includes(f.value) ? f.activeClass : 'border-gray-300 text-gray-500 hover:bg-gray-50'">
-              {{ f.label }}
-            </button>
+      <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border-b border-gray-200">
+        <h1 class="text-lg font-semibold text-gray-900">{{ auth.uiShowsAdmin() ? 'System Map' : 'My Sites' }}</h1>
+        <div class="flex items-center gap-3 flex-wrap">
+          @if (orgOptions().length > 1) {
+            <label class="flex items-center gap-2 text-xs text-gray-600">
+              <span>Organization</span>
+              <select
+                [value]="auth.currentOrgId() ?? ''"
+                (change)="onOrgChange($event)"
+                class="px-3 py-1 text-xs rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-accent-500 focus:border-accent-500 outline-none">
+                @for (o of orgOptions(); track o.id) {
+                  <option [value]="o.id">{{ o.name }}</option>
+                }
+              </select>
+            </label>
           }
+          <div class="flex items-center gap-2">
+            @for (f of filters; track f.value) {
+              <button
+                (click)="toggleFilter(f.value)"
+                class="px-3 py-1 text-xs font-medium rounded-full border transition-colors"
+                [class]="activeFilters().includes(f.value) ? f.activeClass : 'border-gray-300 text-gray-500 hover:bg-gray-50'">
+                {{ f.label }}
+              </button>
+            }
+          </div>
         </div>
       </div>
 
@@ -39,8 +56,9 @@ import * as L from 'leaflet';
     #system-map { width: 100%; min-height: 0; }
   `],
 })
-export class MapViewComponent implements AfterViewInit, OnDestroy {
+export class MapViewComponent implements AfterViewInit, OnDestroy, OnInit {
   private systemService = inject(SystemService);
+  private orgService = inject(OrganizationService);
   private router = inject(Router);
   auth = inject(AuthService);
 
@@ -48,6 +66,27 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   private markers: L.Marker[] = [];
 
   activeFilters = signal<string[]>(['healthy', 'attention', 'critical', 'offline']);
+  adminOrgs = signal<Organization[]>([]);
+
+  orgOptions = computed<{ id: string; name: string }[]>(() => {
+    if (this.auth.uiShowsAdmin()) {
+      return this.adminOrgs().map((o) => ({ id: o.id, name: o.name }));
+    }
+    return this.auth.organizations().map((m) => ({ id: m.id, name: m.name }));
+  });
+
+  ngOnInit(): void {
+    if (this.auth.uiShowsAdmin()) {
+      this.orgService.listAdmin().subscribe({
+        next: (list) => this.adminOrgs.set(list),
+      });
+    }
+  }
+
+  onOrgChange(e: Event): void {
+    const id = (e.target as HTMLSelectElement).value;
+    if (id) this.auth.setCurrentOrg(id);
+  }
   systems = signal<WastewaterSystem[]>([]);
 
   filters = [

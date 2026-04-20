@@ -14,6 +14,16 @@ export const routes: Routes = [
       import('./features/auth/invitation-accept/invitation-accept').then(m => m.InvitationAcceptComponent),
   },
   {
+    path: 'auth/forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'auth/reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password').then(m => m.ResetPasswordComponent),
+  },
+  {
     path: 'forbidden',
     loadComponent: () => import('./features/misc/forbidden/forbidden').then(m => m.ForbiddenComponent),
   },
@@ -99,6 +109,21 @@ export const routes: Routes = [
       {
         path: 'account',
         loadComponent: () => import('./features/account/account').then(m => m.AccountComponent),
+      },
+      {
+        path: 'people',
+        loadComponent: () => import('./features/people/people').then(m => m.PeopleComponent),
+        canActivate: [orgGuard],
+      },
+      {
+        path: 'admin/system-admins',
+        loadComponent: () => import('./features/admin/system-admins/system-admins').then(m => m.SystemAdminsComponent),
+        canActivate: [roleGuard('admin')],
+      },
+      {
+        path: 'admin/overview',
+        loadComponent: () => import('./features/admin/overview/overview').then(m => m.AdminOverviewComponent),
+        canActivate: [roleGuard('admin')],
       },
     ],
   },

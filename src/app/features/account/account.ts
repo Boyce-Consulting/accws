@@ -1,17 +1,11 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TitleCasePipe } from '@angular/common';
 import { AuthService } from '../../core/auth/auth.service';
-import { InvitationService } from '../../core/services/invitation.service';
 import { MeService } from '../../core/services/me.service';
-import {
-  AdminInvitation,
-  InvitationRole,
-  OrgInvitation,
-} from '../../core/services/adapters';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header';
 
-type Tab = 'profile' | 'password' | 'two-factor' | 'organizations' | 'people' | 'admin-invites';
+type Tab = 'profile' | 'password' | 'two-factor' | 'organizations';
 
 @Component({
   selector: 'app-account',
@@ -167,96 +161,14 @@ type Tab = 'profile' | 'password' | 'two-factor' | 'organizations' | 'people' | 
           </div>
         }
 
-        @case ('people') {
-          <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 class="text-base font-semibold text-gray-900 mb-2">Invite someone to {{ auth.currentOrg()?.name }}</h2>
-            <p class="text-sm text-gray-600 mb-4">They'll receive an email with a secure link to join.</p>
-            <form (ngSubmit)="sendInvite()" class="space-y-3">
-              <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
-                <input type="email" [(ngModel)]="inviteEmail" name="ie" placeholder="name@example.com" required
-                  class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                <select [(ngModel)]="inviteRole" name="ir" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                  <option value="owner">Owner</option>
-                </select>
-              </div>
-              @if (inviteError()) { <div class="text-sm text-danger bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ inviteError() }}</div> }
-              @if (inviteMessage()) { <div class="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{{ inviteMessage() }}</div> }
-              <button type="submit" [disabled]="inviteLoading() || !inviteEmail"
-                class="bg-accent-500 hover:bg-accent-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 text-sm">
-                @if (inviteLoading()) { Sending... } @else { Send invite }
-              </button>
-            </form>
-          </div>
 
-          @if (orgInvitesListable()) {
-            <div class="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 class="text-base font-semibold text-gray-900 mb-4">Pending invitations</h2>
-              @if (orgInvites().length === 0) {
-                <p class="text-sm text-gray-500">No pending invitations.</p>
-              } @else {
-                <ul class="divide-y divide-gray-100">
-                  @for (inv of orgInvites(); track inv.id) {
-                    <li class="flex items-center justify-between py-3">
-                      <div>
-                        <p class="text-sm font-medium text-gray-900">{{ inv.email }}</p>
-                        <p class="text-xs text-gray-500">{{ inv.role | titlecase }} &bull; expires {{ formatDate(inv.expiresAt) }}</p>
-                      </div>
-                      <button (click)="revokeOrgInvite(inv.id)" class="text-xs text-danger hover:underline">Revoke</button>
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-          }
-        }
-
-        @case ('admin-invites') {
-          <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 class="text-base font-semibold text-gray-900 mb-2">Invite a system administrator</h2>
-            <p class="text-sm text-gray-600 mb-4">Accepting grants full ACCWS admin privileges and requires 2FA enrollment.</p>
-            <form (ngSubmit)="sendAdminInvite()" class="space-y-3">
-              <input type="email" [(ngModel)]="adminInviteEmail" name="aie" placeholder="new-admin@accws.ca" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-              @if (adminInviteError()) { <div class="text-sm text-danger bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ adminInviteError() }}</div> }
-              @if (adminInviteMessage()) { <div class="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{{ adminInviteMessage() }}</div> }
-              <button type="submit" [disabled]="adminInviteLoading() || !adminInviteEmail"
-                class="bg-accent-500 hover:bg-accent-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 text-sm">
-                @if (adminInviteLoading()) { Sending... } @else { Send admin invite }
-              </button>
-            </form>
-          </div>
-
-          @if (adminInvitesListable()) {
-            <div class="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 class="text-base font-semibold text-gray-900 mb-4">Pending admin invitations</h2>
-              @if (adminInvites().length === 0) {
-                <p class="text-sm text-gray-500">No pending invitations.</p>
-              } @else {
-                <ul class="divide-y divide-gray-100">
-                  @for (inv of adminInvites(); track inv.id) {
-                    <li class="flex items-center justify-between py-3">
-                      <div>
-                        <p class="text-sm font-medium text-gray-900">{{ inv.email }}</p>
-                        <p class="text-xs text-gray-500">Expires {{ formatDate(inv.expiresAt) }}</p>
-                      </div>
-                      <button (click)="revokeAdminInvite(inv.id)" class="text-xs text-danger hover:underline">Revoke</button>
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-          }
-        }
       }
     </div>
   `,
 })
-export class AccountComponent implements OnInit {
+export class AccountComponent {
   auth = inject(AuthService);
   private me = inject(MeService);
-  private invitations = inject(InvitationService);
 
   tab = signal<Tab>('profile');
 
@@ -276,50 +188,17 @@ export class AccountComponent implements OnInit {
   tfLoading = signal(false);
   tfError = signal<string | null>(null);
 
-  // Org invites
-  inviteEmail = '';
-  inviteRole: InvitationRole = 'member';
-  inviteLoading = signal(false);
-  inviteError = signal<string | null>(null);
-  inviteMessage = signal<string | null>(null);
-  orgInvites = signal<OrgInvitation[]>([]);
-  orgInvitesListable = signal(false);
-
-  // Admin invites
-  adminInviteEmail = '';
-  adminInviteLoading = signal(false);
-  adminInviteError = signal<string | null>(null);
-  adminInviteMessage = signal<string | null>(null);
-  adminInvites = signal<AdminInvitation[]>([]);
-  adminInvitesListable = signal(false);
-
   initials = computed(() => {
     const name = this.auth.currentUser()?.name ?? '';
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   });
 
-  canInviteToOrg = computed(() => {
-    if (this.auth.isAdmin()) return !!this.auth.currentOrgId();
-    const activeId = this.auth.currentOrgId();
-    const membership = this.auth.organizations().find((m) => m.id === activeId);
-    return membership?.role === 'owner' || membership?.role === 'admin';
-  });
-
-  visibleTabs = computed(() => {
-    const tabs: { id: Tab; label: string }[] = [
-      { id: 'profile', label: 'Profile' },
-      { id: 'password', label: 'Password' },
-      { id: 'two-factor', label: 'Two-factor' },
-      { id: 'organizations', label: 'Organizations' },
-    ];
-    if (this.canInviteToOrg()) tabs.push({ id: 'people', label: 'People' });
-    if (this.auth.isAdmin()) tabs.push({ id: 'admin-invites', label: 'Admin invites' });
-    return tabs;
-  });
-
-  ngOnInit(): void {
-    this.loadInvites();
-  }
+  visibleTabs = computed<{ id: Tab; label: string }[]>(() => [
+    { id: 'profile', label: 'Profile' },
+    { id: 'password', label: 'Password' },
+    { id: 'two-factor', label: 'Two-factor' },
+    { id: 'organizations', label: 'Organizations' },
+  ]);
 
   formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString();
@@ -398,75 +277,4 @@ export class AccountComponent implements OnInit {
     });
   }
 
-  // --- Invites ---
-  loadInvites(): void {
-    if (this.auth.currentOrgId() && this.canInviteToOrg()) {
-      this.invitations.listForOrg().subscribe({
-        next: (list) => {
-          this.orgInvites.set(list.filter((i) => !i.acceptedAt));
-          this.orgInvitesListable.set(true);
-        },
-        error: () => this.orgInvitesListable.set(false),
-      });
-    }
-    if (this.auth.isAdmin()) {
-      this.invitations.listAdmin().subscribe({
-        next: (list) => {
-          this.adminInvites.set(list.filter((i) => !i.acceptedAt));
-          this.adminInvitesListable.set(true);
-        },
-        error: () => this.adminInvitesListable.set(false),
-      });
-    }
-  }
-
-  sendInvite(): void {
-    this.inviteError.set(null);
-    this.inviteMessage.set(null);
-    this.inviteLoading.set(true);
-    this.invitations.createForOrg(this.inviteEmail, this.inviteRole).subscribe({
-      next: () => {
-        this.inviteMessage.set(`Invitation sent to ${this.inviteEmail}.`);
-        this.inviteEmail = '';
-        this.inviteLoading.set(false);
-        this.loadInvites();
-      },
-      error: (err) => {
-        this.inviteError.set(err?.error?.message ?? 'Could not send invite.');
-        this.inviteLoading.set(false);
-      },
-    });
-  }
-
-  revokeOrgInvite(id: string): void {
-    this.invitations.revokeForOrg(id).subscribe({
-      next: () => this.loadInvites(),
-      error: (err) => this.inviteError.set(err?.error?.message ?? 'Could not revoke.'),
-    });
-  }
-
-  sendAdminInvite(): void {
-    this.adminInviteError.set(null);
-    this.adminInviteMessage.set(null);
-    this.adminInviteLoading.set(true);
-    this.invitations.createAdmin(this.adminInviteEmail).subscribe({
-      next: () => {
-        this.adminInviteMessage.set(`Admin invitation sent to ${this.adminInviteEmail}.`);
-        this.adminInviteEmail = '';
-        this.adminInviteLoading.set(false);
-        this.loadInvites();
-      },
-      error: (err) => {
-        this.adminInviteError.set(err?.error?.message ?? 'Could not send invite.');
-        this.adminInviteLoading.set(false);
-      },
-    });
-  }
-
-  revokeAdminInvite(id: string): void {
-    this.invitations.revokeAdmin(id).subscribe({
-      next: () => this.loadInvites(),
-      error: (err) => this.adminInviteError.set(err?.error?.message ?? 'Could not revoke.'),
-    });
-  }
 }

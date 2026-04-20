@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { API_BASE_URL } from './api.config';
+import { map } from 'rxjs';
 import {
   AdminInvitation,
   AdminInvitationDto,
@@ -26,18 +27,39 @@ export class InvitationService {
   private base = inject(API_BASE_URL);
 
   // --- Public (unauthenticated) preview ---
+  // The preview endpoint returns the raw object (no { data } envelope).
   preview(token: string): Observable<InvitationPreview> {
     return this.http
-      .get<Envelope<InvitationPreviewDto>>(`${this.base}/invitations/${token}`)
-      .pipe(unwrapItem(mapInvitationPreviewFromDto));
+      .get<InvitationPreviewDto>(`${this.base}/invitations/${token}`)
+      .pipe(map(mapInvitationPreviewFromDto));
   }
 
   // --- Accept (JWT required, email must match) ---
-  accept(token: string): Observable<{ message: string; organization_id?: number; role?: string }> {
-    return this.http.post<{ message: string; organization_id?: number; role?: string }>(
+  accept(token: string): Observable<{ message: string; organization_id?: number; role?: string; grants_admin?: boolean; is_admin?: boolean }> {
+    return this.http.post<{ message: string; organization_id?: number; role?: string; grants_admin?: boolean; is_admin?: boolean }>(
       `${this.base}/invitations/${token}/accept`,
       {},
     );
+  }
+
+  // --- Register a new account via invite (public, no auth) ---
+  register(
+    token: string,
+    body: { name: string; password: string; password_confirmation: string; email?: string },
+  ): Observable<{
+    token: string;
+    user: { id: number | string; name: string; email: string; is_admin?: boolean; avatar_url?: string | null };
+    organization_id?: number | null;
+    role?: string;
+    grants_admin?: boolean;
+  }> {
+    return this.http.post<{
+      token: string;
+      user: { id: number | string; name: string; email: string; is_admin?: boolean; avatar_url?: string | null };
+      organization_id?: number | null;
+      role?: string;
+      grants_admin?: boolean;
+    }>(`${this.base}/invitations/${token}/register`, body);
   }
 
   // --- Org-scoped (owner/admin of org, or system admin) ---
@@ -49,13 +71,19 @@ export class InvitationService {
       .pipe(unwrapList(mapOrgInvitationFromDto));
   }
 
-  createForOrg(email: string, role: InvitationRole = 'member', orgId?: string): Observable<OrgInvitation> {
+  createForOrg(
+    opts: { email?: string; phone?: string; role?: InvitationRole },
+    orgId?: string,
+  ): Observable<OrgInvitation> {
     const id = orgId ?? this.auth.currentOrgId();
     if (!id) return throwError(() => new Error('No active organization'));
+    const body: Record<string, string> = { role: opts.role ?? 'member' };
+    if (opts.email) body['email'] = opts.email;
+    if (opts.phone) body['phone'] = opts.phone;
     return this.http
-      .post<{ data: OrgInvitationDto; email_sent?: boolean }>(
+      .post<{ data: OrgInvitationDto; email_sent?: boolean; sms_sent?: boolean }>(
         `${this.base}/organizations/${id}/invitations`,
-        { email, role },
+        body,
       )
       .pipe(unwrapItem((dto) => mapOrgInvitationFromDto(dto)));
   }
@@ -73,9 +101,12 @@ export class InvitationService {
       .pipe(unwrapList(mapAdminInvitationFromDto));
   }
 
-  createAdmin(email: string): Observable<AdminInvitation> {
+  createAdmin(opts: { email?: string; phone?: string }): Observable<AdminInvitation> {
+    const body: Record<string, string> = {};
+    if (opts.email) body['email'] = opts.email;
+    if (opts.phone) body['phone'] = opts.phone;
     return this.http
-      .post<Envelope<AdminInvitationDto>>(`${this.base}/admin/admin-invitations`, { email })
+      .post<Envelope<AdminInvitationDto>>(`${this.base}/admin/admin-invitations`, body)
       .pipe(unwrapItem(mapAdminInvitationFromDto));
   }
 

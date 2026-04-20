@@ -50,36 +50,14 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
         </app-stat-card>
       </div>
 
-      @if (!auth.isAdmin() && upcomingTasks().length > 0) {
-        <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold text-gray-900">What's Coming Up</h2>
-            <a routerLink="/treatments" class="text-sm text-accent-600 hover:text-accent-700 font-medium">View all</a>
-          </div>
-          <div class="space-y-2">
-            @for (task of upcomingTasks(); track task.treatmentPlanId + task.zone + task.productId) {
-              <a [routerLink]="['/treatments', task.treatmentPlanId]" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                <div>
-                  <p class="text-sm font-medium text-gray-900">{{ task.systemName }} &mdash; {{ task.zone }}</p>
-                  <p class="text-xs text-gray-500">{{ task.productName }}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-sm font-medium text-gray-700">{{ task.quantityLbs }} lbs</p>
-                  <p class="text-xs text-gray-500">{{ task.frequency }}</p>
-                </div>
-              </a>
-            }
-          </div>
-        </div>
-      }
-
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+        <!-- Column 1: System Health -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-base font-semibold text-gray-900">System Health</h2>
             <a routerLink="/systems" class="text-sm text-accent-600 hover:text-accent-700 font-medium">View all</a>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div class="grid grid-cols-2 gap-3 mb-4">
             <div class="text-center p-3 bg-green-50 rounded-lg">
               <p class="text-2xl font-bold text-green-600">{{ s.systemsByStatus['healthy'] || 0 }}</p>
               <p class="text-xs text-green-700 font-medium mt-1">Healthy</p>
@@ -100,11 +78,11 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
           <div class="space-y-2">
             @for (sys of systems(); track sys.id) {
               <a [routerLink]="['/systems', sys.id]" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
-                <div class="flex items-center gap-3">
-                  <div class="w-2.5 h-2.5 rounded-full" [class]="statusDotClass(sys.status)"></div>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900">{{ sys.name }}</p>
-                    <p class="text-xs text-gray-500">{{ sys.type | titlecase }} &bull; {{ sys.province }}</p>
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-2.5 h-2.5 rounded-full shrink-0" [class]="statusDotClass(sys.status)"></div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ sys.name }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ sys.type | titlecase }} &bull; {{ sys.province }}</p>
                   </div>
                 </div>
                 <app-status-badge [label]="sys.status | titlecase" [color]="statusColor(sys.status)" />
@@ -113,6 +91,33 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
           </div>
         </div>
 
+        <!-- Column 2: What's Coming Up -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-gray-900">What's Coming Up</h2>
+            <a routerLink="/treatments" class="text-sm text-accent-600 hover:text-accent-700 font-medium">View all</a>
+          </div>
+          @if (upcomingTasks().length > 0) {
+            <div class="space-y-2">
+              @for (task of upcomingTasks(); track task.treatmentPlanId + task.zone + task.productId) {
+                <a [routerLink]="['/treatments', task.treatmentPlanId]" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ task.systemName }} &mdash; {{ task.zone }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ task.productName }}</p>
+                  </div>
+                  <div class="text-right shrink-0 ml-3">
+                    <p class="text-sm font-medium text-gray-700">{{ task.quantityLbs }} lbs</p>
+                    <p class="text-xs text-gray-500">{{ task.frequency }}</p>
+                  </div>
+                </a>
+              }
+            </div>
+          } @else {
+            <p class="text-sm text-gray-400 text-center py-4">No upcoming treatments this month</p>
+          }
+        </div>
+
+        <!-- Column 3: Alerts + Recent Activity -->
         <div class="space-y-6">
           <div class="bg-white rounded-xl border border-gray-200 p-5">
             <h2 class="text-base font-semibold text-gray-900 mb-4">Alerts</h2>
@@ -141,7 +146,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                   </div>
-                  <div>
+                  <div class="min-w-0">
                     <p class="text-sm text-gray-800">{{ item.title }}</p>
                     @if (item.detail) { <p class="text-xs text-gray-500">{{ item.detail }}</p> }
                     <p class="text-xs text-gray-500 mt-0.5">{{ item.timestamp | date:'short' }}</p>

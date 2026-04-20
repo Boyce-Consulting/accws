@@ -5,6 +5,24 @@ import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { API_BASE_URL, JWT_STORAGE_KEY } from '../services/api.config';
 import { User, UserRole } from '../models/user.model';
 import { OrganizationMembership } from '../models/organization.model';
+import { environment } from '../../../environments/environment';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (resp: { access_token?: string; error?: string }) => void;
+            error_callback?: (err: unknown) => void;
+          }) => { requestAccessToken: (overrideConfig?: { prompt?: string }) => void };
+        };
+      };
+    };
+  }
+}
 
 export type AuthProvider = 'local' | 'google' | 'microsoft';
 
@@ -15,6 +33,7 @@ export interface LoginRequest {
 
 const ORG_STORAGE_KEY = 'accws_org_id';
 const PENDING_INVITE_KEY = 'accws_pending_invite_token';
+const VIEW_AS_CLIENT_KEY = 'accws_view_as_client';
 
 interface BackendUser {
   id: number | string;
@@ -48,6 +67,10 @@ interface TokenResponse {
 interface TwoFactorRequiredResponse {
   two_factor_required: true;
   challenge_token: string;
+  /** Added by backend when the challenged user is a system admin. */
+  is_admin?: boolean;
+  /** Optional hint so the UI can show who's being challenged. */
+  email?: string;
 }
 
 interface MustEnrollResponse {
@@ -97,6 +120,8 @@ export class AuthService {
   private _currentOrgId = signal<string | null>(localStorage.getItem(ORG_STORAGE_KEY));
   private _isLoading = signal(false);
   private _error = signal<string | null>(null);
+  private _pendingChallenge = signal<LoginResponse | null>(null);
+  private _viewAsClient = signal<boolean>(localStorage.getItem(VIEW_AS_CLIENT_KEY) === '1');
 
   readonly token = this._token.asReadonly();
   readonly currentUser = this._currentUser.asReadonly();
@@ -111,11 +136,14 @@ export class AuthService {
   readonly isAdmin = computed(() => this._currentUser()?.role === 'admin');
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly pendingChallenge = this._pendingChallenge.asReadonly();
+  readonly viewAsClient = this._viewAsClient.asReadonly();
+  /** Effective UI role: actual admin AND not currently viewing-as-client. */
+  readonly uiShowsAdmin = computed(() => this.isAdmin() && !this._viewAsClient());
 
   constructor() {
-    if (this._token()) {
-      this.loadMe().subscribe();
-    }
+    // Session hydration happens in APP_INITIALIZER (see app.config.ts) so that
+    // routing waits for /me to resolve before activating any guards.
     effect(() => {
       const id = this._currentOrgId();
       if (id) localStorage.setItem(ORG_STORAGE_KEY, id);
@@ -256,8 +284,79 @@ export class AuthService {
     this._currentOrgId.set(orgId);
   }
 
-  loginWithOAuth(_provider: AuthProvider): void {
+  setViewAsClient(on: boolean): void {
+    this._viewAsClient.set(on);
+    if (on) localStorage.setItem(VIEW_AS_CLIENT_KEY, '1');
+    else localStorage.removeItem(VIEW_AS_CLIENT_KEY);
+  }
+
+  loginWithOAuth(provider: AuthProvider): void {
+    if (provider === 'google') {
+      this.loginWithGoogle();
+      return;
+    }
     this._error.set('OAuth sign-in is not configured yet.');
+  }
+
+  private loginWithGoogle(): void {
+    const clientId = environment.googleClientId;
+    if (!clientId) {
+      this._error.set('Google sign-in is not configured: missing client ID.');
+      return;
+    }
+    const gsi = window.google?.accounts?.oauth2;
+    if (!gsi) {
+      this._error.set('Google sign-in is not available (script failed to load).');
+      return;
+    }
+
+    this._isLoading.set(true);
+    this._error.set(null);
+
+    const tokenClient = gsi.initTokenClient({
+      client_id: clientId,
+      scope: 'openid email profile',
+      callback: (resp) => {
+        if (!resp.access_token) {
+          this._error.set(resp.error ?? 'Google sign-in was cancelled.');
+          this._isLoading.set(false);
+          return;
+        }
+        this.exchangeGoogleToken(resp.access_token);
+      },
+      error_callback: (err: unknown) => {
+        this._error.set((err as { message?: string })?.message ?? 'Google sign-in failed.');
+        this._isLoading.set(false);
+      },
+    });
+    tokenClient.requestAccessToken({ prompt: '' });
+  }
+
+  exchangeGoogleToken(accessToken: string): Observable<LoginResponse> {
+    this._isLoading.set(true);
+    this._error.set(null);
+    const req$ = this.http.post<LoginResponse>(`${this.apiUrl}/auth/google/exchange`, {
+      access_token: accessToken,
+    });
+    req$.subscribe({
+      next: (res) => {
+        if (isTokenResponse(res)) {
+          this.applyToken(res.token, res.user);
+        } else {
+          this._pendingChallenge.set(res);
+        }
+        this._isLoading.set(false);
+      },
+      error: (err) => {
+        this._error.set(err?.error?.message ?? 'Google sign-in failed.');
+        this._isLoading.set(false);
+      },
+    });
+    return req$;
+  }
+
+  consumePendingChallenge(): void {
+    this._pendingChallenge.set(null);
   }
 
   // --- Phone sign-in (STUBBED) ---------------------------------------------
@@ -301,6 +400,14 @@ export class AuthService {
       }, 500);
       return () => clearTimeout(t);
     });
+  }
+
+  /**
+   * Public entry point used by invite-register flows where the token and user
+   * come back from a non-login endpoint. Equivalent to applyToken + navigate.
+   */
+  consumeLogin(token: string, backendUser: BackendUser): void {
+    this.applyToken(token, backendUser);
   }
 
   private applyToken(token: string, backendUser: BackendUser): void {
